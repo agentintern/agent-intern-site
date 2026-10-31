@@ -265,8 +265,9 @@ async function officeChecks(browser) {
   const withJs = factsIn(await javaScriptOn.page.content());
   await javaScriptOn.context.close();
 
-  const noWebGl = "const get = HTMLCanvasElement.prototype.getContext; HTMLCanvasElement.prototype.getContext = function (type, ...rest) { return /webgl/.test(type) ? null : get.call(this, type, ...rest); };";
-  for (const [name, options, script] of [['no WebGL', {}, noWebGl], ['reduced motion', { reducedMotion: 'reduce' }]]) {
+  // The check for a usable chip runs in a worker, so this is what stops it: the worker says no.
+  const noWebGl = "const Real = window.Worker; window.Worker = function (url) { if (!String(url).includes('gl-probe')) return new Real(url); const fake = { terminate() {} }; setTimeout(() => fake.onmessage?.({ data: false })); return fake; };";
+  for (const [name, options, script] of [['no usable WebGL', {}, noWebGl], ['reduced motion', { reducedMotion: 'reduce' }]]) {
     const { context, page } = await open(options, script);
     await page.goto(`${SITE}/`);
     await page.waitForTimeout(2000);

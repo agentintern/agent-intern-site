@@ -21,7 +21,7 @@ await build({
 
 // Classic script: it runs in an opaque origin, where module scripts would need CORS.
 await build({
-  entryPoints: { 'sandbox-try': 'src/client/sandbox-try.ts' },
+  entryPoints: { 'sandbox-try': 'src/client/sandbox-try.ts', 'gl-probe': 'src/client/gl-probe.ts' },
   bundle: true,
   minify: true,
   format: 'iife',

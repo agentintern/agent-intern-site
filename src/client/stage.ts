@@ -10,21 +10,25 @@ const WATCH_MS = 3000;
 // This many frames in a row, each this slow, and it doesn't wait the 3 seconds.
 const HOPELESS_MS = 120;
 const HOPELESS_FRAMES = 6;
+const PROBE_MS = 4000;
 const MOODS: readonly string[] = ['asleep', 'working', 'thinking', 'stuck', 'panicking', 'celebrating', 'refusing'];
 
 let office: Office | null = null;
 let story: HTMLElement | null = null;
 
-function canRender(): boolean {
+function canRender(): Promise<boolean> {
   const { connection } = navigator as Navigator & { connection?: { saveData?: boolean } };
-  if (reducedMotion() || connection?.saveData) return false;
-  const context = document.createElement('canvas').getContext('webgl2');
-  if (!context) return false;
-  // With no real graphics chip the browser draws in software, on the same thread as the page. The poster is better.
-  const info = context.getExtension('WEBGL_debug_renderer_info');
-  const renderer = info ? String(context.getParameter(info.UNMASKED_RENDERER_WEBGL)) : '';
-  context.getExtension('WEBGL_lose_context')?.loseContext();
-  return !/swiftshader|llvmpipe|softpipe|software|basic render/i.test(renderer);
+  if (reducedMotion() || connection?.saveData) return Promise.resolve(false);
+  return new Promise((resolve) => {
+    const worker = new Worker('/js/gl-probe.js');
+    const finish = (usable: boolean): void => {
+      worker.terminate();
+      resolve(usable);
+    };
+    worker.onmessage = (event) => finish(event.data === true);
+    worker.onerror = () => finish(false);
+    setTimeout(() => finish(false), PROBE_MS);
+  });
 }
 
 // The mood comes from one place: the state the server wrote into the page. Refreshes update it there.
@@ -228,9 +232,10 @@ export function startStage(): void {
   host.dataset.mood = readMood();
   startStory();
   startTaskBox();
-  if (!canRender()) return;
   const begin = (): void => {
-    requestAnimationFrame(() => setTimeout(() => void run(host).catch(() => story?.classList.remove('live'))));
+    requestAnimationFrame(() => setTimeout(() => {
+      void canRender().then((usable) => (usable ? run(host) : undefined)).catch(() => story?.classList.remove('live'));
+    }));
   };
   if (document.readyState === 'complete') begin();
   else window.addEventListener('load', begin, { once: true });
