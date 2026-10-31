@@ -86,8 +86,12 @@ build.
 
 ## The shift
 
-**A deploy key, not a personal token, for pushing.** A token on your account inherits your admin
-rights, so "can only push `shift/*`" couldn't hold. A deploy key isn't an admin, so a ruleset binds it.
+**A deploy key, not a personal token, for pushing, and rulesets with no bypass at all.** The first version
+kept an exception for admins, and a real attack with the key pushed straight to `main`: GitHub counts a
+deploy key as the account that owns the repo, so the exception covered it. With no bypass, the key is
+refused on `main`, new branches and tags, and works on `shift/*`. GitHub also won't let Actions bypass a
+ruleset on a personal account, so `main` takes pull requests, which a deploy key can't open or merge. The
+cost is that a person has to pause a ruleset to change the gate itself.
 
 **`shift:finish` never runs git in the intern's folder.** Hooks or config planted in that `.git` would
 run on your machine, outside the container. A separate clone stays pristine and never gets mounted.

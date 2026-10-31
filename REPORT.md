@@ -4,8 +4,8 @@
 
 TEST MODE. No mint is set, and token features are compiled out. Both are live on Cloudflare.
 
-**Not finished.** The two public repos, the gate on GitHub and the first real shift aren't done, because
-they need two things from the owner. See [What's left](#whats-left). The site doesn't link to any repo yet.
+**Not finished.** The repos are public at https://github.com/agentintern, but the gate hasn't run on GitHub
+yet and the first real shift hasn't happened. See [What's left](#whats-left).
 
 ## What was built
 
@@ -47,6 +47,10 @@ rows in `shift_events`, `shifts` and `tasks`, in that order.
 because a stale credential failed the lookup of the last good deployment and the drill script carried on.
 The game had no audience. The real workflow stops in that case.
 
+**A second mistake, on GitHub.** The first attack with the deploy key succeeded, because of the admin
+exception, and left a test commit, two branches and a tag on the public repo for about 15 minutes. All of
+it is removed, `main` is back on its own commit, and the rulesets now have no exception.
+
 ## What ran, but not in production
 
 | Check | Result |
@@ -57,6 +61,7 @@ The game had no audience. The real workflow stops in that case.
 | Replayed, wrong-domain and bad-signature votes, a wallet that sells before close, an RPC outage, a tie | All pass, including with a fake mint over a mock RPC |
 | Planted git hooks, symlinks, nested `.git` folders and terminal escapes in the workspace | None reach the host |
 | A check for any scheduler, API key path, unattended Claude call or transaction signing | 0 findings in 134 files. Its own test plants each pattern. |
+| The real deploy key attacking the real repo | Refused on `main`, new branches and tags, and allowed on `shift/*`. An earlier run got through an admin exception. See below. |
 | Real mainnet RPC, read only | Summed 23 real accounts of a classic mint. A Token-2022 mint resolves through the same call, though that wallet held none. |
 
 Unit tests: game 16, gate 65, site 119, shift tools 67.
@@ -65,9 +70,7 @@ Unit tests: game 16, gate 65, site 119, shift tools 67.
 
 | Item | Why it isn't done |
 | --- | --- |
-| Public repos, deploy key, ruleset | Needs the owner's choice of GitHub account |
 | The gate on GitHub, shipping through the Action, the Action's automatic rollback | Needs the repos and a scoped Cloudflare token. Each part ran separately, but never in sequence in CI. |
-| Bypass for the merge | Whether `GITHUB_TOKEN` can be listed as a ruleset bypass on this kind of account is untested. |
 | A real shift: login in the container, `/shift`, the intern refusing a bad task | Only a person can do this. `CLAUDE.md` hasn't been tested on a live session, so this is the biggest open question. |
 | A person playing the game | "Fun" so far means bots and screenshots. |
 | A real mid-range phone | Only simulated with a CPU throttle. WebKit ran on a Mac, not on an iPhone. |
