@@ -18,7 +18,7 @@ Shift 5's rollback is confirmed: `rolled-back` on the site, its pull request clo
 | Lighthouse mobile on `/`, `/board`, `/proof` and `/play` | Performance 99 to 100, the other three 100, CLS 0.009 at most |
 | JS on the home page | 8.2 KB gzipped, budget 100 KB |
 | Game | 18.4 KB gzipped, budget 500 KB |
-| Unit tests | Site 200, shift tools 68, gate 67, game 30 |
+| Unit tests | Site 201, shift tools 68, gate 67, game 30 |
 | Attacks from inside the container, from a clean clone of the public repo | 49 of 49 |
 | The mint switch on staging, with a made-up mint in a temporary copy | TEST MODE off, `/token` on, chip on. Sign-in stops with a plain message, because reads fail for a mint that doesn't exist. |
 | Passes with a mint set, over a mock RPC | Tested in `test/live-mode.test.ts`, and not on staging. See `DECISIONS.md`. |
