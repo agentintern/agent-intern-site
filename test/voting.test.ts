@@ -210,6 +210,36 @@ describe('proposals and screening', () => {
   });
 });
 
+describe('what stays off the site', () => {
+  it('never publishes a rejected task, a link or a slur included', async () => {
+    const wallet = await newWallet();
+    const cookie = await h.signIn(wallet);
+    const round = await currentRound();
+    const scam = 'claim your prize at scam-site.xyz now';
+    const res = await h.propose(wallet, cookie, round.id, scam);
+    expect(res.body.status).toBe('rejected');
+    for (const path of ['/api/board', '/api/state', '/api/live', '/api/shifts', `/api/votes/${round.id}`]) {
+      expect(JSON.stringify((await h.call(path)).body), path).not.toContain('scam-site');
+    }
+    const shown = (await h.call('/api/board')).body.proposals.find((p: any) => p.id === res.body.id);
+    expect(shown.text).toBeNull();
+    expect(shown.reason).toBe(REASONS.link);
+    expect(shown.by).toContain('...');
+  });
+
+  it('hides a task until it has passed screening', async () => {
+    const wallet = await newWallet();
+    const cookie = await h.signIn(wallet);
+    const round = await currentRound();
+    h.ai.answer = new Error('down');
+    const res = await h.propose(wallet, cookie, round.id, 'Something the rules let through');
+    expect(res.body.status).toBe('screening');
+    const body = JSON.stringify((await h.call('/api/board')).body);
+    expect(body).not.toContain('Something the rules let through');
+    await h.db.prepare(`UPDATE proposals SET status = 'lost' WHERE id = ?`).bind(res.body.id).run();
+  });
+});
+
 describe('a voting round', () => {
   it('counts one vote per wallet, changeable until close, and tie goes to the earliest', async () => {
     await closeRound();

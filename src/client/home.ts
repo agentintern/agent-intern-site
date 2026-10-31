@@ -23,7 +23,7 @@ function render(state: State): void {
   } else {
     fill(list, ...state.top.map((task) =>
       h('li', {},
-        h('span', {}, task.text),
+        h('span', {}, task.text ?? ''),
         h('span', { class: 'count' }, `${task.votes} ${task.votes === 1 ? 'vote' : 'votes'}`),
         h('span', { class: 'meta' }, `by ${task.by}`),
       )));

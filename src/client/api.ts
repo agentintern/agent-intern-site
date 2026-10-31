@@ -30,7 +30,7 @@ export interface Proposal {
   id: number;
   wallet: string;
   by: string;
-  text: string;
+  text: string | null;
   status: string;
   reason: string | null;
   rejectedBy: string | null;

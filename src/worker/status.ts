@@ -82,12 +82,15 @@ export async function homeState(env: Env): Promise<Record<string, unknown>> {
   };
 }
 
+// Screening exists to keep this text off the site, so a rejected task's words are never public.
+// Anyone can still see that it happened, who sent it, and why. Text still in review stays hidden too.
 export function publicProposal(p: { id: number; wallet: string; text: string; status: string; reason: string | null; rejected_by: string | null; created_at: number; votes: number }): Record<string, unknown> {
+  const screened = p.status !== 'rejected' && p.status !== 'screening';
   return {
     id: p.id,
     wallet: p.wallet,
     by: shortWallet(p.wallet),
-    text: p.text,
+    text: screened ? p.text : null,
     status: p.status,
     reason: p.reason,
     rejectedBy: p.rejected_by,

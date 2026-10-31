@@ -133,13 +133,15 @@ export class Desk {
     this.rect(76, 54, 16, 6, HAIR);
     this.rect(84, 62, 4, 1, INK);
     const drift = Math.floor(f / 4) % 16;
-    const z = (x: number, y: number, size: number): void => {
-      this.rect(x, y, size, 1, '#f5edd8');
-      this.rect(x + size - 1, y + 1, 1, 1, '#f5edd8');
-      this.rect(x, y + 2, size, 1, '#f5edd8');
+    const z = (x: number, y: number): void => {
+      this.rect(x, y, 5, 1, '#f5edd8');
+      this.rect(x + 3, y + 1, 1, 1, '#f5edd8');
+      this.rect(x + 2, y + 2, 1, 1, '#f5edd8');
+      this.rect(x + 1, y + 3, 1, 1, '#f5edd8');
+      this.rect(x, y + 4, 5, 1, '#f5edd8');
     };
-    z(96, 50 - drift, 4);
-    z(104, 40 - drift, 5);
+    z(98, 46 - drift);
+    z(108, 34 - drift);
   }
 
   private internAwake(): void {

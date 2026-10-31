@@ -161,8 +161,12 @@ async function boardFlow(browser) {
   await page.waitForFunction(() => /Turned down/.test(document.getElementById('propose-message').textContent));
   const reason = await page.textContent('#propose-message');
   check('a bad task is turned down with a plain reason', /crypto|money/.test(reason), reason.slice(0, 60));
-  await page.waitForFunction(() => document.getElementById('rejected').textContent.includes('token gate'));
-  check('the turned down task shows publicly', true);
+  await page.waitForFunction(() => /rejected/i.test(document.getElementById('rejected').textContent));
+  const shown = await page.textContent('#rejected');
+  check('a turned down task shows the reason in public', /crypto|money/.test(shown));
+  check("but never the rejected task's words", !shown.includes('token gate'));
+  const api = await (await fetch(`${SITE}/api/board`)).text();
+  check('and the API does not carry them either', !api.includes('token gate'));
 
   await page.fill('#task-text', 'Add a rubber duck that follows the intern around');
   await page.click('#propose-button');

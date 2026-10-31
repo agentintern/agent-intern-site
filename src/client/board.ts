@@ -163,7 +163,7 @@ function renderBoard(data: Board): void {
   } else {
     fill(list, ...open.map((proposal) =>
       h('li', { 'data-proposal': String(proposal.id) },
-        h('span', {}, proposal.text),
+        h('span', { class: proposal.text ? undefined : 'empty' }, proposal.text ?? 'A task is being checked.'),
         proposal.status === 'screening'
           ? h('span', { class: 'stamp note' }, 'in review')
           : h('span', { class: 'btn-row' }, h('span', { class: 'count' }, `${proposal.votes}`), voteButton(proposal)),
@@ -177,7 +177,7 @@ function renderBoard(data: Board): void {
   } else {
     fill(out, ...rejected.map((proposal) =>
       h('li', {},
-        h('span', {}, proposal.text),
+        h('span', {}, `A task from ${proposal.by}`),
         h('span', { class: 'stamp bad' }, 'rejected'),
         h('span', { class: 'meta' }, proposal.reason ?? ''),
       )));
