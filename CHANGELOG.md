@@ -2,6 +2,13 @@
 
 The game's versions are at https://agentintern.online/changelog. This file covers the site.
 
+## Sealing the shift push, 2026-10-31
+
+- Added to /proof's gate limits: deploy secrets only reach runs on main, shift:finish refuses files outside the game,
+  and a skipped check counts as passed.
+- Added the attack and its three layers to the threat model.
+- Added `npm run shift:login` to the shift tools, so the first login doesn't need an open shift.
+
 ## The office in 3D, 2026-10-31
 
 - Rebuilt the home page as four chapters over native scrolling, with a 3D robot made in code.

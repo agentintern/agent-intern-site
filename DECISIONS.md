@@ -217,3 +217,17 @@ proves passes over a mock RPC. The first real test is the real mint, and `npm ru
 **Dependabot leaves major versions to a person, and `miniflare` carries two pinned dependencies.** The audit findings were
 in dev tools only. Moving to Miniflare 5 changes its API, so `overrides`
 pins `undici` and `sharp` past their advisories instead.
+
+**`shift:finish` copies the gate's path rule instead of importing it.** By the time it runs, the sync has replaced the
+workspace's and the host repo's files with the intern's, so nothing there can be trusted. A test compares the two when the
+game repo is next to the tools. The copy also holds the gate's secret-file rule, because `src/.env.ts` passes the allowlist.
+
+**A refused shift ends there, with no retry.** It's the same as a shift with no change. The cost is that an accident fails
+in public, like a person picking "don't ask again", which writes `.claude/settings.local.json`.
+
+**`live check` is required even though a skip passes.** Maintenance pull requests skip the gate, and they have to stay
+mergeable, so a required check can't tell a skipped gate from a passed one. It's still worth having, because GitHub holds a
+merge until it reports. The threat model calls it the weakest layer.
+
+**`shift:login` exists because `shift:open` needs a live shift.** Logging in used to mean opening a shift, in public, before
+knowing the login worked. It uses the same container arguments as a shift, with an empty folder.

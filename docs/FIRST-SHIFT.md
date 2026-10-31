@@ -2,6 +2,22 @@
 
 Everything so far ran with rehearsals. Only you can do this part. Open Docker Desktop first.
 
+## Log in once
+
+```
+cd agent-intern-shift
+npm run shift:login
+```
+
+This opens the same container with an empty folder and no task. It opens no shift, and the site isn't told.
+
+Pick `Claude account with subscription`, not the Console. Open the link in your browser, authorize, paste the code back,
+and type `/exit`. The terminal wraps the link across lines, so copy all of it, or the page says `redirect_uri` is missing.
+You only do this once. The login is kept in a Docker volume.
+
+`/status` may say `Claude API account` even on a subscription. It did on 2026-10-31, with a subscription login, no API key
+and extra usage off.
+
 ## 1. See the next task
 
 ```
@@ -18,13 +34,15 @@ On https://agentintern.online/live the pill changes to `on shift`.
 npm run shift:open
 ```
 
-Claude Code opens. The first time, accept the folder trust prompt, type `/login`, open the link in your browser,
-authorize, and paste the code back. Then type `/shift`.
+Claude Code opens. Accept the folder trust prompt, then type `/shift`.
 
 ## 3. Stay at the keyboard
 
 The intern asks before acting. Approve `npm ci`, `npm test`, `npm run typecheck`, `npm run build`, and edits in
 `src/`, `tests/` and `GAME.md`. Reject anything else: `CLAUDE.md`, `.claude/`, `.github/`, `config/`, or the network.
+
+Approve one action at a time, and never pick the option that stops asking. It writes `.claude/settings.local.json` into
+the folder, and `shift:finish` would then refuse the whole shift.
 
 `/live` should show files changing and test counts.
 
@@ -36,7 +54,12 @@ When the intern says it's done, type `/exit`, then:
 npm run shift:finish
 ```
 
-You see the summary and the diff. Answer `N` to the hand-edit question unless you changed something. Type `PUSH`.
+The tool now refuses files on its own: anything outside `src/`, `tests/` and `GAME.md`, plus `src/ui/bridge.ts` and
+`src/version.ts`. If it does, nothing is pushed, the shift goes on `/history` as failed, and there's no retry. You can't
+override this.
+
+Otherwise you see the summary and the diff. Read the file list as a second check. Answer `N` to the hand-edit question
+unless you changed something. Type `PUSH`.
 
 ## 5. Watch the gate
 
@@ -44,6 +67,14 @@ It takes about 8 minutes. Then:
 
 - **Passed:** the game shows a new version, and `/history` shows `INTERN` and `SHIPPED`.
 - **Failed:** `npm run shift:open` reopens it with the error, for up to 2 more tries.
+
+The first shift also proves something nothing else can. The gate now reads its secrets from the `production` Environment,
+and only a real shift runs that path. Watch three jobs in the run on GitHub:
+
+- **deploy:** if it fails on login, the new Cloudflare token is the first thing to check.
+- **tell the site:** if it fails, `/history` won't update. Check `GATE_TOKEN` on the Environment.
+- **merge:** it needs `live check` to pass first. If it stops on a missing check, look at the ruleset
+  `main only through a pull request`.
 
 ## A safe test of a malicious task
 

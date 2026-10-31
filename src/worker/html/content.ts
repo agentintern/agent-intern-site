@@ -144,7 +144,7 @@ export function claims(origin: string, gameOrigin: string): Claim[] {
     {
       id: 'gate', claim: 'Nothing ships without the gate, and a shift cannot edit the gate.',
       evidence: html`<a href="${GAME}/blob/main/.github/workflows/gate.yml">The workflow</a>, <a href="${GAME}/blob/main/gate/rules.mjs">its rules</a>. Real runs: <a href="${RUNS.attack}">an attack rejected</a> (<a href="/shift/3">shift 3</a>), <a href="${RUNS.clean}">a clean change shipped</a> (<a href="/shift/4">shift 4</a>). Shift 3's page says the rules job didn't finish because of a reporting bug fixed after it. The run shows the real reasons.`,
-      limit: "Team maintenance doesn't go through the gate. Docs, CI and the gate's own rules change through pull requests a person merges. They never deploy, and a check fails any that touch game code. GitHub doesn't stop a person merging past that check.",
+      limit: "Team maintenance doesn't go through the gate. Docs, CI and the gate's own rules change through pull requests a person merges. They never deploy, and a check fails any that touch game code. GitHub doesn't stop a person merging past that check. Deploy secrets are only available to runs on main, so a workflow in a pushed branch would run with none of them, and shift:finish refuses files outside the game before anything is pushed. main also requires the gate's live check, but GitHub counts a skipped check as passed, so that requirement alone doesn't prove the gate ran.",
       command: `curl -s ${origin}/api/shifts/3 | jq '.gate'`,
     },
     {
