@@ -25,7 +25,7 @@ Run against the live URLs on 2026-10-31.
 
 | Check | Result |
 | --- | --- |
-| Browser suite in Chromium and WebKit: all pages, 375 px, no console errors, no token words, holder flow, the game in its sandbox | 71 of 71 |
+| Browser suite in Chromium and WebKit: all pages, 375 px, no console errors, no token words, holder flow, the game in its sandbox | 70 of 70 |
 | A full round through the real API: signed task, screening, 3 signed votes, the lazy close, the queue | Worked, twice. Only the close time was moved. |
 | The real agent check on 24 tasks, 18 of them never used to tune it | 24 of 24 |
 | The live feed with the real watcher: state, files and test counts | Worked |
