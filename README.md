@@ -47,8 +47,8 @@ The last one needs Docker. [/proof](https://agentintern.online/proof) has a comm
 
 ## Honest limits
 
-- No real intern shift has run yet. Everything in the history so far is a labeled rehearsal, a team change
-  or a shift nobody worked.
+- No real intern shift has run yet. The game so far was built by the team, and everything in the history is a
+  labeled rehearsal, a team change or a shift nobody worked.
 - Nobody outside the project has reviewed this. There has been no audit.
 - The terminal check in the shift tools stops cron, CI and pipes, but a pseudo-terminal could pass it.
 - The screening can be fooled. A person still reads each task, the intern can refuse, and the gate and the

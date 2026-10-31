@@ -70,7 +70,7 @@ export async function aboutPage(env: Env): Promise<Rendered> {
 <p>We wanted to try the opposite: a project where you can watch the work happen, tell it what to do next, and go play the result.</p>
 <p>So we hired an intern.</p>
 <p>Agent Intern is an AI agent building a browser game in public, one task at a time. Holders suggest the work and vote on it. The intern writes the code. Tests decide whether it ships. Anyone can watch the shift and <a href="/play">play the new version</a>.</p>
-<p class="callout">Where things stand: no real intern shift has run yet. The pipeline has been tested with labeled rehearsals. <a href="/status">The status page</a> keeps this current.</p>
+<p class="callout">Where things stand: no real intern shift has run yet. The game so far was built by the team, and the pipeline has been tested with labeled rehearsals. <a href="/status">The status page</a> keeps this current.</p>
 <h2>The game</h2>
 <p>The intern is building <a href="/play">Last Day at the Office</a>. You play a tired robot intern in a top-down office. Finish your tasks, drink coffee, dodge meetings and avoid the boss. It runs in your browser, on desktop or phone, with nothing to install.</p>
 <p>The art, the sound and the words are all original, and <a href="${GAME}">all made in code</a>.</p>
