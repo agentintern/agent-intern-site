@@ -1,6 +1,10 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { createHarness, type Harness } from './harness';
 
+// Built at runtime, so no secret scanner mistakes this file for a real leak.
+const FAKE_ANTHROPIC = ['sk', 'ant', 'api03', 'abcdefghijklmnopqrstuvwxyz123456'].join('-');
+const FAKE_GITHUB = `ghp_${'abcdefghijklmnopqrstuvwxyz0123456789'}`;
+
 let h: Harness;
 const shiftAuth = 'shift-secret';
 const watcherAuth = 'watcher-secret';
@@ -104,7 +108,7 @@ describe('a shift', () => {
     const shift = await start('Careful with the summary');
     const res = await h.call('/api/shift/finish', {
       bearer: shiftAuth,
-      body: { shiftId: shift.id, status: 'failed', summary: 'oops sk-ant-FIXTURE', note: 'fine' },
+      body: { shiftId: shift.id, status: 'failed', summary: `oops ${FAKE_ANTHROPIC}`, note: 'fine' },
     });
     expect(res.body.shift.summary).toBe('[removed: this looked like a secret]');
   });
@@ -130,7 +134,7 @@ describe('the live feed', () => {
 
   it('drops a file name that looks like a secret, even if the watcher misses it', async () => {
     const shift = await start('Secret name task');
-    const planted = await live({ shiftId: shift.id, kind: 'file', path: 'src/ghp_FIXTURE.ts', change: 'added' });
+    const planted = await live({ shiftId: shift.id, kind: 'file', path: `src/${FAKE_GITHUB}.ts`, change: 'added' });
     expect(planted.body.stored).toBe(false);
     const detail = (await h.call(`/api/shifts/${shift.id}`)).body;
     expect(JSON.stringify(detail)).not.toContain('ghp_');
@@ -191,7 +195,7 @@ describe('the gate', () => {
   it('removes a secret from a gate message', async () => {
     const shift = await start('Noisy gate');
     await h.call('/api/shift/finish', { bearer: shiftAuth, body: { shiftId: shift.id, status: 'done' } });
-    await gate({ shiftId: shift.id, stage: 'secrets', status: 'fail', detail: 'found ghp_FIXTURE', final: true });
+    await gate({ shiftId: shift.id, stage: 'secrets', status: 'fail', detail: `found ${FAKE_GITHUB}`, final: true });
     const detail = (await h.call(`/api/shifts/${shift.id}`)).body;
     expect(JSON.stringify(detail)).not.toContain('ghp_abc');
     await h.call('/api/shift/finish', { bearer: shiftAuth, body: { shiftId: shift.id, status: 'failed' } });
