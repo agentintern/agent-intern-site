@@ -2,8 +2,8 @@
   "siteOrigin": "https://agentintern.online",
   "gameOrigin": "https://play.agentintern.online",
   "repos": {
-    "site": "",
-    "game": ""
+    "site": "https://github.com/agentintern/agent-intern-site",
+    "game": "https://github.com/agentintern/agent-intern-game"
   },
   "rounds": {
     "closesUtc": [
