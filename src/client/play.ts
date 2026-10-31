@@ -83,4 +83,4 @@ form.addEventListener('submit', (event) => {
 });
 
 void initChrome();
-poll(loadBoard, () => 30_000);
+poll(loadBoard, () => 120_000);

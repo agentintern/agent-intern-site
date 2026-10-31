@@ -5,7 +5,7 @@ declare const __MINT__: string;
 
 // Compiled in at build time. With the mint empty, this whole block and its words drop out of the
 // bundle, so test mode really does mention none of it.
-function showMintChip(): void {
+export function showMintChip(): void {
   if (!__MINT__) return;
   const slot = maybeId('ca-slot');
   if (!slot) return;

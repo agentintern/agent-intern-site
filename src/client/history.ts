@@ -21,4 +21,4 @@ async function load(): Promise<void> {
 }
 
 void initChrome();
-poll(load, () => 30_000);
+poll(load, () => 120_000);

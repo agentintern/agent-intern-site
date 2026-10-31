@@ -1,5 +1,5 @@
 import { get, type Pause, type Round, type Shift } from './api';
-import { initChrome, showShiftPill } from './chrome';
+import { showMintChip, showShiftPill } from './chrome';
 import { byId, fill, h, poll, when } from './dom';
 import { statusStamp } from './stamps';
 
@@ -65,5 +65,5 @@ function render(status: Status): void {
   }
 }
 
-void initChrome();
-poll(async () => render(await get<Status>('/api/status')), () => 30_000);
+showMintChip();
+poll(async () => render(await get<Status>('/api/status')), () => 60_000);

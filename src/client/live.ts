@@ -1,6 +1,5 @@
 import { get, type Pause, type Shift, type Task } from './api';
-import { showShiftPill } from './chrome';
-import { initChrome } from './chrome';
+import { showMintChip, showShiftPill } from './chrome';
 import { Desk, moodFor, STATE_WORDS } from './desk';
 import { byId, clockTime, fill, h, poll, setText, timer } from './dom';
 import { renderQueue } from './queue';
@@ -100,5 +99,6 @@ setInterval(() => {
   setText('timer', current ? timer(Date.now() - current.startedAt) : '--:--');
 }, 1000);
 
-void initChrome();
-poll(async () => render(await get<Live>(`/api/live?after=${lastId}`)), () => (onShift ? 5000 : 30_000));
+// The free tier allows 100,000 API calls a day, and a launch is exactly when people watch.
+showMintChip();
+poll(async () => render(await get<Live>(`/api/live?after=${lastId}`)), () => (onShift ? 10_000 : 60_000));

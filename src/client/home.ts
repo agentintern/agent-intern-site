@@ -1,5 +1,5 @@
 import { get, type State } from './api';
-import { initChrome, showShiftPill } from './chrome';
+import { showMintChip, showShiftPill } from './chrome';
 import { Desk, moodFor, STATE_WORDS } from './desk';
 import { byId, countdown, fill, h, poll, setText } from './dom';
 import { renderQueue } from './queue';
@@ -35,5 +35,5 @@ setInterval(() => {
   if (closesAt) setText('countdown', countdown(closesAt - Date.now()));
 }, 1000);
 
-void initChrome();
-poll(async () => render(await get<State>('/api/state')), () => 20_000);
+showMintChip();
+poll(async () => render(await get<State>('/api/state')), () => 60_000);

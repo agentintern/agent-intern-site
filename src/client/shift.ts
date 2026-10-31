@@ -104,4 +104,4 @@ byId('copy-post').addEventListener('click', () => {
 });
 
 void initChrome();
-poll(async () => render(await get<Detail>(`/api/shifts/${id}`)), () => 10_000);
+poll(async () => render(await get<Detail>(`/api/shifts/${id}`)), () => 30_000);

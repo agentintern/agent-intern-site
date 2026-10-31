@@ -1,7 +1,7 @@
 import { buildMessage, type SignedAction } from '../shared/message';
 import { verifySignature } from '../shared/verify';
 import { ApiError, get, post, type Pause, type Proposal, type Round, type Task } from './api';
-import { initChrome, showShiftPill } from './chrome';
+import { showMintChip, showShiftPill } from './chrome';
 import { byId, countdown, fill, h, maybeId, poll, setText, when } from './dom';
 import { renderQueue } from './queue';
 import { listenForWallets, testWallet, walletOptions, type Signer } from './wallet';
@@ -273,5 +273,5 @@ setInterval(() => {
 }, 1000);
 
 listenForWallets(() => { if (maybeId('pass') && !me.wallet) renderPass(); });
-void initChrome();
-poll(refresh, () => 12_000);
+showMintChip();
+poll(refresh, () => 45_000);
