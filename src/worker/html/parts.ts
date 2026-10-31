@@ -24,11 +24,6 @@ export function workLabel(workedBy: string): Safe {
   return html`<span class="work work-${workedBy}" title="${label.meaning}">${label.label}</span>`;
 }
 
-export function taskOrigin(task: { kind: string; proposer: string | null; team?: number }): string {
-  if (task.team) return 'team change';
-  return task.kind === 'intern' ? "intern's choice" : `by ${task.proposer ?? 'unknown'}`;
-}
-
 export function robotFor(open: ShiftRow | null, last: ShiftRow | null, paused: boolean): RobotState {
   if (open) {
     if (open.state === 'writing' || open.state === 'gate') return 'working';
