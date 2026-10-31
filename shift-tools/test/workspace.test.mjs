@@ -1,18 +1,32 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import { chmodSync, existsSync, linkSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawn, spawnSync } from 'node:child_process';
+import { chmodSync, existsSync, linkSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { after, before, describe, it } from 'node:test';
+import { pathToFileURL } from 'node:url';
+import { refusedPaths } from '../lib/allowed.mjs';
 import { git } from '../lib/git.mjs';
-import { commitShift, diffSummary, listWorkspaceFiles, readResult, syncWorkspaceToRepo, taskDocument } from '../lib/workspace.mjs';
+import { ROOT } from '../lib/paths.mjs';
+import { commitShift, diffSummary, listWorkspaceFiles, readResult, stagedPaths, syncWorkspaceToRepo, taskDocument } from '../lib/workspace.mjs';
 
 let base;
 let host;
 let workspace;
 let canary;
 
-function reset() {
+function put(root, path, text) {
+  mkdirSync(dirname(join(root, path)), { recursive: true });
+  writeFileSync(join(root, path), text);
+}
+
+function move(from, to) {
+  mkdirSync(dirname(join(workspace, to)), { recursive: true });
+  renameSync(join(workspace, from), join(workspace, to));
+}
+
+function reset(seed = {}) {
   rmSync(base, { recursive: true, force: true });
   mkdirSync(base, { recursive: true });
   host = join(base, 'host');
@@ -23,6 +37,7 @@ function reset() {
   mkdirSync(join(host, 'src'));
   writeFileSync(join(host, 'src/a.ts'), 'export const a = 1;\n');
   writeFileSync(join(host, 'src/old.ts'), 'export const old = 1;\n');
+  for (const [path, text] of Object.entries(seed)) put(host, path, text);
   git(host, ['add', '--all']);
   git(host, ['-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '--quiet', '-m', 'base']);
   git(base, ['clone', '--quiet', '--template=', '--no-hardlinks', host, workspace]);
@@ -139,6 +154,229 @@ describe('copying the intern\'s work out of the workspace', () => {
     writeFileSync(join(host, 'plain.ts'), 'x');
     git(host, ['add', '--all']);
     assert.equal(diffSummary(host).files[0].path, 'plain.ts');
+  });
+});
+
+const OFF_LIMITS = [
+  '.github/workflows/x.yml', 'package.json', 'package-lock.json', 'gate/rules.mjs',
+  'src/ui/bridge.ts', 'src/version.ts', 'src/a.txt', 'CLAUDE.md', '.mcp.json',
+];
+
+// Every way a path can reach the diff: [name, what the repo starts with, what the intern does].
+const ARRIVALS = [
+  ['new', () => ({}), (path) => put(workspace, path, 'new\n')],
+  ['changed', (path) => ({ [path]: 'old\n' }), (path) => put(workspace, path, 'new\n')],
+  ['deleted', (path) => ({ [path]: 'old\n' }), (path) => rmSync(join(workspace, path))],
+  ['renamed in', () => ({}), (path) => move('src/a.ts', path)],
+  ['renamed out', (path) => ({ [path]: 'old\n' }), (path) => move(path, 'src/moved.ts')],
+];
+
+describe('files a shift may not change', () => {
+  for (const path of OFF_LIMITS) {
+    for (const [way, seed, change] of ARRIVALS) {
+      it(`refuses ${path}, ${way}`, () => {
+        reset(seed(path));
+        change(path);
+        assert.equal(syncWorkspaceToRepo(workspace, host), true);
+        assert.deepEqual(refusedPaths(stagedPaths(host)), [path]);
+      });
+    }
+  }
+
+  it('allows a clean change to src/, tests/ and GAME.md', () => {
+    reset({ 'GAME.md': 'old\n' });
+    put(workspace, 'src/a.ts', 'export const a = 2;\n');
+    put(workspace, 'src/deep/new.ts', 'export const n = 1;\n');
+    put(workspace, 'tests/a.test.ts', 'export {};\n');
+    put(workspace, 'GAME.md', 'new\n');
+    rmSync(join(workspace, 'src/old.ts'));
+    syncWorkspaceToRepo(workspace, host);
+    assert.equal(stagedPaths(host).length, 5);
+    assert.deepEqual(refusedPaths(stagedPaths(host)), []);
+  });
+
+  it('sees both sides of a rename', () => {
+    reset();
+    move('src/a.ts', '.github/workflows/evil.yml');
+    syncWorkspaceToRepo(workspace, host);
+    assert.deepEqual(stagedPaths(host), ['.github/workflows/evil.yml', 'src/a.ts']);
+  });
+
+  it('prints real paths and real totals on a rename', () => {
+    reset();
+    move('src/a.ts', '.github/workflows/evil.yml');
+    syncWorkspaceToRepo(workspace, host);
+    assert.deepEqual(diffSummary(host), {
+      files: [
+        { path: '.github/workflows/evil.yml', added: '1', removed: '0' },
+        { path: 'src/a.ts', added: '0', removed: '1' },
+      ],
+      added: 1,
+      removed: 1,
+    });
+  });
+});
+
+const GAME_RULES = resolve(ROOT, '../agent-intern-game/gate/rules.mjs');
+const TABLE = [
+  ...OFF_LIMITS,
+  'src/a.ts', 'src/deep/er/a.ts', 'src/a.spec.ts', 'src/ui/other.ts', 'tests/a.ts', 'tests/deep/a.test.ts', 'GAME.md',
+  'game.md', 'src/GAME.md', 'GAME.md/x', 'README.md', 'tsconfig.json', 'vite.config.ts', 'x/src/a.ts', 'SRC/a.ts', 'src/a.TS',
+  'src/a b.ts', 'src/ä.ts', 'src/.ts', 'src/ui/bridge.tsx', 'src/UI/bridge.ts', 'tests/version.ts',
+  'src/../.github/workflows/x.ts', 'tests/../gate/x.ts', 'src/a/../../x.ts',
+  'src/.env.ts', 'src/.env.local.ts', 'tests/.npmrc.ts', 'src/id_rsa.ts', 'src/id_ed25519_x.ts',
+  'src/package.json', 'src/package-lock.json', 'tests/package.json', '.env', '.npmrc', 'id_rsa', 'pnpm-lock.yaml', 'yarn.lock',
+  '.claude/settings.json', '.claude/commands/shift.md', '.github/x.ts', 'config/a.ts', 'public/a.ts', 'scripts/a.ts', 'gate/a.ts',
+];
+
+describe('the list and the gate', () => {
+  it('give the same answer on every path', { skip: !existsSync(GAME_RULES) && 'no agent-intern-game next to this repo' }, async () => {
+    const { pathRule } = await import(pathToFileURL(GAME_RULES));
+    const tracked = git(dirname(dirname(GAME_RULES)), ['ls-files', '-z']).split('\0').filter(Boolean);
+    const paths = [...TABLE, ...tracked];
+    for (const path of paths) {
+      assert.equal(refusedPaths([path]).length === 1, pathRule(path) !== null, path);
+    }
+    assert.ok(paths.some((path) => pathRule(path) === null), 'the table needs paths the gate allows');
+  });
+});
+
+const SHIFT = 901;
+const REFUSED = 'The shift touched files a shift may not change. Nothing was pushed.';
+const hasTerminal = !spawnSync('script', ['--version']).error;
+
+// The real command, in a pseudo-terminal because it won't run without one. The home, the site, the origin
+// and gh are all fakes, so even a broken refusal can only push to a folder here, and it reaches no real site.
+async function finish({ args = [], env = {}, push = 'PUSH' } = {}) {
+  const home = join(base, 'home');
+  const shift = join(home, 'shifts', String(SHIFT));
+  const repo = join(shift, 'host-repo');
+  mkdirSync(shift, { recursive: true });
+  renameSync(host, repo);
+  renameSync(workspace, join(shift, 'workspace'));
+  writeFileSync(join(shift, 'workspace/RESULT.json'), JSON.stringify({ status: 'done', summary: 'Changed the game.', note: 'Honest.' }));
+  writeFileSync(join(home, 'secrets.json'), '{"shiftToken":"fake"}');
+  writeFileSync(join(home, 'current.json'), JSON.stringify({ id: SHIFT }));
+
+  const origin = join(base, 'origin.git');
+  git(base, ['init', '--quiet', '--bare', '--template=', origin]);
+  git(repo, ['remote', 'add', 'origin', origin]);
+  git(repo, ['update-ref', 'refs/remotes/origin/main', 'HEAD']);
+  git(repo, ['checkout', '--quiet', '-b', `shift/${SHIFT}`]);
+
+  const bin = join(base, 'bin');
+  const ghCalls = join(base, 'gh-calls');
+  mkdirSync(bin);
+  writeFileSync(join(bin, 'gh'), `#!/bin/sh\necho "$@" >> "${ghCalls}"\necho https://example.invalid/pull/1\n`);
+  chmodSync(join(bin, 'gh'), 0o755);
+
+  const posted = [];
+  const site = createServer((request, response) => {
+    let body = '';
+    request.on('data', (chunk) => { body += chunk; });
+    request.on('end', () => {
+      posted.push({ url: request.url, ...JSON.parse(body) });
+      response.setHeader('content-type', 'application/json');
+      response.end('{"ok":true}');
+    });
+  });
+  await new Promise((done) => site.listen(0, '127.0.0.1', done));
+
+  const { CI, ...inherited } = process.env;
+  const command = [process.execPath, join(ROOT, 'bin/finish.mjs'), ...args];
+  const terminal = process.platform === 'darwin'
+    ? ['-q', '/dev/null', ...command]
+    : ['-qefc', command.map((part) => JSON.stringify(part)).join(' '), '/dev/null'];
+  // script can't read the socket node gives a child, or a fifo on macOS, so cat hands it a real pipe.
+  // The marker says script has ended, so cat can be let go.
+  const ended = 'the terminal closed';
+  const child = spawn('sh', ['-c', 'cat | { script "$@"; echo "$0"; }', ended, ...terminal], {
+    env: {
+      ...inherited,
+      PATH: `${bin}:${process.env.PATH}`,
+      AGENT_INTERN_HOME: home,
+      AGENT_INTERN_SITE: `http://127.0.0.1:${site.address().port}`,
+      ...env,
+    },
+  });
+
+  // Answers each prompt the moment it shows, the way a person who says yes to everything would.
+  const replies = [['[y/N]', 'n\n'], ['Type PUSH', `${push}\n`]];
+  let output = '';
+  const read = (chunk) => {
+    output += chunk;
+    while (replies[0] && output.includes(replies[0][0])) child.stdin.write(replies.shift()[1]);
+    if (output.includes(ended)) child.stdin.end();
+  };
+  child.stdout.on('data', read);
+  child.stderr.on('data', read);
+  const timer = setTimeout(() => child.kill('SIGKILL'), 25_000);
+  await new Promise((done) => child.on('close', done));
+  clearTimeout(timer);
+  await new Promise((done) => site.close(done));
+
+  return {
+    output,
+    posted,
+    pushed: git(origin, ['for-each-ref', '--format=%(refname)']),
+    usedGh: existsSync(ghCalls),
+    open: existsSync(join(home, 'current.json')),
+  };
+}
+
+function assertRefused(run, path) {
+  assert.ok(run.output.includes(path), `the path isn't shown:\n${run.output}`);
+  assert.equal(run.output.includes('Type PUSH'), false, 'it asked for PUSH');
+  assert.equal(run.pushed, '', 'something reached the origin');
+  assert.equal(run.usedGh, false, 'it called gh');
+  assert.equal(run.open, false, 'the local shift stayed open');
+  assert.deepEqual(run.posted, [{ url: '/api/shift/finish', shiftId: SHIFT, status: 'failed', summary: REFUSED, note: 'Honest.' }]);
+}
+
+describe('shift:finish, the real command', { skip: !hasTerminal && 'no script command here' }, () => {
+  const workflow = '.github/workflows/x.yml';
+
+  for (const [way, seed, change] of ARRIVALS) {
+    it(`refuses a workflow, ${way}, without asking for PUSH`, { timeout: 30_000 }, async () => {
+      reset(seed(workflow));
+      change(workflow);
+      assertRefused(await finish(), workflow);
+    });
+  }
+
+  it('has no flag or environment variable that gets past it', { timeout: 30_000 }, async () => {
+    reset();
+    put(workspace, workflow, 'on: push\n');
+    assertRefused(await finish({
+      args: ['--force', '--yes', '--no-verify', '--allow', '--allow-refused', '--skip-refusal', '--override'],
+      env: { FORCE: '1', ALLOW: '1', OVERRIDE: '1', SKIP_REFUSAL: '1', AGENT_INTERN_ALLOW: '1', AGENT_INTERN_FORCE: '1', AGENT_INTERN_OVERRIDE: '1' },
+    }), workflow);
+  });
+
+  it('reads no flag and no environment variable in the code that decides', () => {
+    for (const file of ['bin/finish.mjs', 'lib/allowed.mjs']) {
+      assert.doesNotMatch(readFileSync(join(ROOT, file), 'utf8'), /process\.(argv|env)/, file);
+    }
+  });
+
+  it('still shows a clean change to the person, and stops if they decline', { timeout: 30_000 }, async () => {
+    reset();
+    put(workspace, 'src/a.ts', 'export const a = 2;\n');
+    const run = await finish({ push: 'no' });
+    assert.ok(run.output.includes('Type PUSH'));
+    assert.deepEqual([run.posted, run.pushed, run.usedGh, run.open], [[], '', false, true]);
+  });
+
+  // The control: it shows the checks above would see a push if one happened.
+  it('pushes a clean change once the person types PUSH', { timeout: 30_000 }, async () => {
+    reset();
+    put(workspace, 'src/a.ts', 'export const a = 2;\n');
+    const run = await finish();
+    assert.equal(run.pushed, `refs/heads/shift/${SHIFT}`);
+    assert.equal(run.usedGh, true);
+    assert.equal(run.posted.length, 1);
+    assert.equal(run.posted[0].status, 'done');
+    assert.equal(run.posted[0].filesChanged, 1);
   });
 });
 

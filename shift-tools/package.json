@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "shift:start": "node bin/start.mjs",
+    "shift:login": "node bin/login.mjs",
     "shift:open": "node bin/open.mjs",
     "shift:finish": "node bin/finish.mjs",
     "shift:pause": "node bin/pause.mjs",

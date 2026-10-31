@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { refusedPaths } from '../lib/allowed.mjs';
 import { postJson, readSecrets } from '../lib/api.mjs';
 import { requireCurrent } from '../lib/current.mjs';
 import { git } from '../lib/git.mjs';
@@ -8,7 +9,7 @@ import { CONFIG, CURRENT_FILE, hostRepoDir, PUSH_KEY, shiftDir, workspaceDir } f
 import { ask, confirmWord, requirePerson } from '../lib/prompt.mjs';
 import { redact } from '../lib/redact.mjs';
 import { safeText } from '../lib/safe.mjs';
-import { commitShift, diffSummary, readResult, syncWorkspaceToRepo } from '../lib/workspace.mjs';
+import { commitShift, diffSummary, readResult, stagedPaths, syncWorkspaceToRepo } from '../lib/workspace.mjs';
 
 requirePerson('shift:finish');
 
@@ -45,6 +46,19 @@ if (!syncWorkspaceToRepo(workspace, host)) {
     shiftId: current.id, status: 'failed', summary: 'The shift ended with no change to the game.', note,
   });
   closeLocal();
+  process.exit(0);
+}
+
+// A pushed branch can run its own workflows before the gate looks, so this stops them here. Nothing skips it.
+const refused = refusedPaths(stagedPaths(host));
+if (refused.length > 0) {
+  console.log('\nThe shift touched files a shift may not change:\n');
+  for (const path of refused) console.log(`  ${safeText(path, 160)}`);
+  await postJson('/api/shift/finish', secrets.shiftToken, {
+    shiftId: current.id, status: 'failed', summary: 'The shift touched files a shift may not change. Nothing was pushed.', note,
+  });
+  closeLocal();
+  console.log('\nNothing was pushed. Recorded as failed.');
   process.exit(0);
 }
 

@@ -93,8 +93,13 @@ export function syncWorkspaceToRepo(workspace, host) {
   return git(host, ['status', '--porcelain']).length > 0;
 }
 
+// --no-renames so a rename shows as a delete and an add, and both sides get checked.
+export function stagedPaths(host) {
+  return git(host, ['diff', '--cached', '--name-only', '-z', '--no-renames']).split('\0').filter(Boolean);
+}
+
 export function diffSummary(host) {
-  const numstat = git(host, ['diff', '--cached', '--numstat', '-z']).split('\0').filter(Boolean);
+  const numstat = git(host, ['diff', '--cached', '--numstat', '-z', '--no-renames']).split('\0').filter(Boolean);
   let added = 0;
   let removed = 0;
   const files = numstat.map((line) => {

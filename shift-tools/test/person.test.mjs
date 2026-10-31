@@ -14,13 +14,18 @@ const run = (script, env = {}) =>
   });
 
 describe('a person starts every shift', () => {
-  for (const script of ['start.mjs', 'open.mjs', 'finish.mjs', 'pause.mjs', 'team.mjs']) {
+  for (const script of ['start.mjs', 'login.mjs', 'open.mjs', 'finish.mjs', 'pause.mjs', 'team.mjs']) {
     it(`${script} refuses to run without a terminal, even with the answers piped in`, () => {
       const result = run(script);
       assert.notEqual(result.status, 0);
       assert.match(result.stderr, /needs a person at a real terminal/);
     });
   }
+
+  it('never tells the site or reads a task when it only logs in', () => {
+    const login = readFileSync(join(ROOT, 'bin/login.mjs'), 'utf8');
+    assert.doesNotMatch(login, /api\.mjs|postJson|getJson|readSecrets|current\.mjs|workspaceDir/);
+  });
 
   it('has no flag that skips the confirmation', () => {
     for (const file of ['bin/start.mjs', 'bin/finish.mjs', 'bin/open.mjs']) {
