@@ -215,8 +215,8 @@ ol.plain { list-style: decimal; }
 .tile b { font: 400 0.9375rem/1.3 var(--mono); color: var(--go-on-dark); }
 .tile.bad b { color: var(--tie-on-dark); }
 .feed { font: 400 0.875rem/1.5 var(--mono); max-height: 420px; overflow-y: auto; }
-.feed li, .timeline li { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 8px; }
-.feed time { color: var(--steel); }
+.feed li, .timeline li { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px; }
+.feed time { color: var(--steel); white-space: nowrap; }
 .timeline { font: 400 0.8125rem/1.5 var(--mono); background: var(--night); color: var(--text); padding: 10px 12px; max-height: 300px; overflow-y: auto; }
 .timeline time { color: var(--steel); }
 .mini-robot .robot { width: 96px; height: auto; margin: 6px 0; }
@@ -245,6 +245,12 @@ ol.plain { list-style: decimal; }
 table { border-collapse: collapse; width: 100%; font-size: 0.875rem; }
 th { text-align: left; font: 400 0.75rem/1.3 var(--mono); color: var(--ink-2); white-space: nowrap; }
 th, td { padding: 7px 10px 7px 0; border-top: 1px solid var(--rule); vertical-align: top; }
+td { overflow-wrap: break-word; }
+@media (max-width: 480px) {
+  table.stack thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  table.stack tr { display: block; padding: 7px 0; border-top: 1px solid var(--rule); }
+  table.stack td { display: block; padding: 0; border: 0; overflow-wrap: anywhere; }
+}
 td.num, th.num { text-align: right; }
 .break { word-break: break-all; }
 

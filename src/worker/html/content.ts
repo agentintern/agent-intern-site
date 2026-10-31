@@ -298,7 +298,7 @@ export async function apiPage(env: Env, origin: string): Promise<Rendered> {
     state: shiftLine(o),
     body: html`
 ${title('API', 'Public, read-only and with no key. Please keep it gentle.')}
-<section class="paper"><h2>JSON</h2><div class="table-scroll"><table><thead><tr><th scope="col">Path</th><th scope="col">What it gives you</th></tr></thead><tbody>${PUBLIC_ENDPOINTS.map((e) => html`<tr><td class="break"><code>${e.path}</code></td><td>${e.about}</td></tr>`)}</tbody></table></div></section>
+<section class="paper"><h2>JSON</h2><div class="table-scroll"><table class="stack"><thead><tr><th scope="col">Path</th><th scope="col">What it gives you</th></tr></thead><tbody>${PUBLIC_ENDPOINTS.map((e) => html`<tr><td class="break"><code>${e.path}</code></td><td>${e.about}</td></tr>`)}</tbody></table></div></section>
 <section class="paper"><h2>MCP for agents</h2><p>Read the current round, the queue and the last shift from an agent. It can read but it can't vote, and it has no writes and no secrets.</p><pre><code>claude mcp add --transport http agent-intern ${origin}/mcp</code></pre><p>Tools: <code>current_round</code>, <code>queue</code>, <code>last_shift</code>, <code>how_to_verify</code>.</p></section>`,
   };
 }
