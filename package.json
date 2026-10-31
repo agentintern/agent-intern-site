@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
+    "poster": "node scripts/render-poster.mjs",
     "dev": "node scripts/build.mjs && wrangler pages dev dist --port 8788",
     "test": "vitest run",
     "test:browser": "node scripts/browser-check.mjs",
@@ -20,9 +21,11 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261031.1",
     "@types/node": "^26.6.6",
+    "@types/three": "0.186.0",
     "esbuild": "^0.28.2",
     "miniflare": "^4.20260730.0",
     "playwright": "^1.64.1",
+    "three": "0.186.1",
     "typescript": "^5.9.3",
     "vitest": "^4.0.0",
     "wrangler": "^4.156.0"
