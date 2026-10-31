@@ -231,3 +231,8 @@ merge until it reports. The threat model calls it the weakest layer.
 
 **`shift:login` exists because `shift:open` needs a live shift.** Logging in used to mean opening a shift, in public, before
 knowing the login worked. It uses the same container arguments as a shift, with an empty folder.
+
+**The ruleset on `shift/maintenance-*` has no bypass, so it stops people too.** The gate skips those branches, so the deploy
+key must not reach them, and an exception for admins would cover the key, as it did once on `main`. A person turns the
+ruleset off for a moment to open a maintenance branch. It covers updates as well as creation, or the old branches would
+still be open. The push ruleset the brief asked for would have had the same flaw, if GitHub had allowed it.

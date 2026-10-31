@@ -94,6 +94,13 @@ function rulesets() {
             required_review_thread_resolution: false,
           },
         },
+        {
+          type: 'required_status_checks',
+          parameters: {
+            strict_required_status_checks_policy: false,
+            required_status_checks: [{ context: 'live check', integration_id: 15368 }],
+          },
+        },
       ],
       bypass_actors: bypass,
     },
@@ -103,6 +110,15 @@ function rulesets() {
       enforcement: 'active',
       conditions: { ref_name: { include: ['~ALL'], exclude: ['refs/heads/shift/**', '~DEFAULT_BRANCH'] } },
       rules: [{ type: 'creation' }, { type: 'update' }, { type: 'deletion' }],
+      bypass_actors: bypass,
+    },
+    {
+      // The gate skips these branches, so the deploy key must not be able to reach them. A person turns this off to open one.
+      name: 'maintenance branches stay closed',
+      target: 'branch',
+      enforcement: 'active',
+      conditions: { ref_name: { include: ['refs/heads/shift/maintenance-*', 'refs/heads/shift/maintenance-*/**'], exclude: [] } },
+      rules: [{ type: 'creation' }, { type: 'update' }],
       bypass_actors: bypass,
     },
     {

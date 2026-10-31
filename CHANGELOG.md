@@ -6,7 +6,7 @@ The game's versions are at https://agentintern.online/changelog. This file cover
 
 - Added to /proof's gate limits: deploy secrets only reach runs on main, shift:finish refuses files outside the game,
   and a skipped check counts as passed.
-- Added the attack and its three layers to the threat model.
+- Added the attack and its four layers to the threat model.
 - Added `npm run shift:login` to the shift tools, so the first login doesn't need an open shift.
 
 ## The office in 3D, 2026-10-31

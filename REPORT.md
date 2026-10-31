@@ -11,7 +11,7 @@ Shift 5's rollback is confirmed: `rolled-back` on the site, its pull request clo
 
 ## Sealing the shift push, 2026-10-31
 
-A workflow in a pushed branch could read the game's deploy secrets before the gate looked. That's closed, in the three
+A workflow in a pushed branch could read the game's deploy secrets before the gate looked. That's closed, in the four
 layers `docs/THREAT-MODEL.md` describes.
 
 | Check | Where | Result |
@@ -32,12 +32,12 @@ layers `docs/THREAT-MODEL.md` describes.
 | `gh secret list` on the repo | GitHub | 0 secrets. All 3 are on `production` |
 | `live check` required on `main` | GitHub | Added. A maintenance pull request with it skipped still shows as ready to merge |
 | A push ruleset on `.github/**` | GitHub | Refused: "Source public repos cannot have push rules", and only org-owned repos can have them |
+| A ruleset on `shift/maintenance-*`, with no bypass | GitHub | Active. GitHub's rule lookup shows it on those branches, including the old ones, and not on `shift/8` or `shift/123` |
 | The site's CI on the commit before this line | GitHub | Green |
 | `/proof` after `npm run deploy` | Production | The new limit is live, with TEST MODE and no open shift |
 
 **One thing found late.** `npm run setup` still wrote the secrets to the repo, so running it again would have reopened this.
-It now writes to `production`, with a test. The site's one push had already gone, so the public copy in `shift-tools/` catches
-up with the next push.
+It now writes to `production`, with a test.
 
 **The login in the container works.** `npm run shift:login` opened the real container with an empty folder, a person logged
 in, and the model answered through the proxy. No shift was opened. `/status` says `Claude API account`, but the login is a
@@ -49,7 +49,8 @@ subscription: billing type `stripe_subscription`, no API key, extra usage off.
   Environment's `GATE_TOKEN` have never been used. Watch the deploy, tell the site and merge jobs.
 - That `live check` stops anything beyond a race. A skip counts as passed, so it doesn't stop a `shift/maintenance-*` branch.
   A rejected shift skipping it and a branch job named `live check` are from how GitHub works, not from a test.
-- That the deploy key behaves the same. It wasn't tried again, because that needs a push.
+- That the deploy key is refused on `shift/maintenance-*`. The ruleset has no exception, and the key was refused the same way
+  on `main`, but this one hasn't been tried, because that needs a push to the game.
 
 ## The office in 3D, 2026-10-31
 

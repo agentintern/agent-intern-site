@@ -32,7 +32,7 @@ workflow in a shift could have read them, and it could have given itself a write
 A probe confirmed the first part on 2026-10-31: a workflow in a branch saw all three secrets. It never touched their
 values, and it printed only whether each one was empty.
 
-There are three layers now:
+There are four layers now:
 
 1. **`shift:finish` refuses it.** After copying the workspace and before asking for `PUSH`, it checks every changed path
    against the gate's allowlist, on both sides of a rename. If anything is refused, nothing is pushed and the shift is
@@ -42,6 +42,9 @@ There are three layers now:
    runs from `main`, so it can reach them. The probe, run again after the repo-level secrets were deleted, saw all three
    empty, and its job that asked for the Environment was refused before running a step.
 3. **`main` requires the gate's `live check`.** GitHub holds a merge until that check reports.
+4. **Nothing reaches the branches that skip the gate.** `shift/maintenance-*` branches skip it, so a ruleset stops anyone
+   creating or updating them. A person turns the ruleset off for a moment to open one. It has no exception, because GitHub
+   counts a deploy key as the account that owns the repo, so an exception for admins would cover the key too.
 
 What's still true:
 
@@ -49,9 +52,11 @@ What's still true:
   refused a push ruleset because they need an organization-owned repo that isn't public.
 - **It could still ask for a write token.** The repo's read-only default only applies when a workflow doesn't ask.
 - **The third layer is the weakest.** GitHub counts a skipped check as passed. Pull request #13 showed as ready to merge
-  with `live check` skipped, and maintenance pull requests depend on that. A branch named `shift/maintenance-*` skips the
-  gate, so this check doesn't stop it. Two more gaps follow from how GitHub works, and weren't tested: a shift the rules
-  job rejects also skips `live check`, and a workflow in a branch could name its own job `live check`.
+  with `live check` skipped, and maintenance pull requests depend on that. Two more gaps follow from how GitHub works, and
+  weren't tested: a shift the rules job rejects also skips `live check`, and a workflow in a branch could name its own job
+  `live check`.
+- **The fourth layer hasn't met the deploy key.** GitHub's rule lookup shows it on those branches and not on `shift/8`, but
+  no push has tried it.
 - **Someone holding the deploy key can skip the first layer.** It lives on the maintainer's machine, and it reaches
   `shift/*`, so only the second layer applies.
 

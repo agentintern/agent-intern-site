@@ -386,6 +386,13 @@ describe('the deploy secrets', () => {
     assert.equal(calls.length, 1);
     assert.match(calls[0], /'--env', 'production'/);
   });
+
+  // GitHub counts a deploy key as the account that owns the repo, so an exception for admins would cover the key.
+  it('sit behind rulesets with no exceptions, including the branches that skip the gate', () => {
+    const setup = readFileSync(join(ROOT, 'scripts/setup.mjs'), 'utf8');
+    assert.match(setup, /const bypass = \[\];/);
+    assert.match(setup, /name: 'maintenance branches stay closed'/);
+  });
 });
 
 describe('RESULT.json', () => {
