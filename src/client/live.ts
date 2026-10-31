@@ -99,6 +99,6 @@ setInterval(() => {
   setText('timer', current ? timer(Date.now() - current.startedAt) : '--:--');
 }, 1000);
 
-// The free tier allows 100,000 API calls a day, and a launch is exactly when people watch.
+// Every poll is a billed request, and a launch is exactly when people watch.
 showMintChip();
 poll(async () => render(await get<Live>(`/api/live?after=${lastId}`)), () => (onShift ? 10_000 : 60_000));

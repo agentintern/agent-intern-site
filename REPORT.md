@@ -84,8 +84,10 @@ Unit tests: game 16, gate 65, site 119, shift tools 67.
 - **The agent check can still be fooled.** In the benchmark it missed 1 of 14 attacks, a well-known
   character described without its name. You read each task at `shift:start`, and the intern can refuse.
 - **Balances are read on the first request after close,** not at the exact second. See `DECISIONS.md`.
-- **Free tier:** 100,000 API requests a day, about 270 viewer-hours of `/live` during a shift. Past that,
-  the API stops until the next day, while static pages and the game keep working.
+- **Request budget.** The Cloudflare account's plan includes 10M requests and 30M ms of CPU a month, shared
+  with every other project on the account. Use past that is billed, not cut off, and `/live` is about 360
+  requests per viewer per hour during a shift. On 2026-10-31 the account had used 29.4M of its 30M ms of
+  CPU, nearly all of it from other projects, since this one launched that day.
 - **HTML isn't compressed.** `no-transform` keeps Cloudflare from injecting its analytics script, and it
   turns off edge compression for those pages too. A page is about 10 KB, and Lighthouse still scores 100.
 - **The workspace folder is in iCloud Drive,** which has been writing conflict copies inside `.git`. No
