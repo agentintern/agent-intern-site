@@ -29,8 +29,8 @@ async function load(): Promise<void> {
         h('a', { href: `/shift/${entry.id}` }, `Shift ${entry.id}`),
         `, ${when(entry.at)}, `,
         entry.kind === 'intern' ? "intern's choice" : `by ${entry.proposer ?? 'unknown'}`,
-        entry.commitSha ? ', ' : '',
-        entry.commitSha ? h('a', { href: `${repos.game}/commit/${entry.commitSha}` }, entry.commitSha.slice(0, 7)) : null,
+        entry.commitSha && repos.game ? ', ' : '',
+        entry.commitSha && repos.game ? h('a', { href: `${repos.game}/commit/${entry.commitSha}` }, entry.commitSha.slice(0, 7)) : null,
         entry.handEdited ? ', hand-edited by a person' : '',
         entry.rehearsal ? ', rehearsal' : '',
       ))));

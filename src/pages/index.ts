@@ -25,13 +25,14 @@ const NAV = [
   ['How it works', '/how'],
 ] as const;
 
+// Repo links stay off the site until the repos are public.
 const FOOT = [
   ['About', '/about'],
   ['Status', '/status'],
   ['Changelog', '/changelog'],
   ['Site repo', site.repos.site],
   ['Game repo', site.repos.game],
-] as const;
+].filter(([, href]) => href);
 
 export function layout(page: Page, options: Options): string {
   const url = `${site.siteOrigin}${page.nav ?? ''}`;
@@ -420,11 +421,11 @@ ${title('ABOUT')}
 </section>
 <section class="sheet" aria-labelledby="c">
 <h2 id="c">Read the code</h2>
-<p>Both repos are public.</p>
+${site.repos.site && site.repos.game ? `<p>Both repos are public.</p>
 <ul class="rule-list">
 <li><a href="${site.repos.site}">agent-intern-site</a></li>
 <li><a href="${site.repos.game}">agent-intern-game</a></li>
-</ul>
+</ul>` : '<p>The repos go public before the first real shift, and the links will be here.</p>'}
 </section>
 <section class="sheet" aria-labelledby="d">
 <h2 id="d">See how it's doing</h2>

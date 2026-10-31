@@ -71,7 +71,7 @@ function render(detail: Detail): void {
       h('figcaption', {}, kind))));
 
   const link = (url: string | null, text: string): HTMLElement | null => (url ? h('a', { href: url }, text) : null);
-  const commit = shift.commit ? `${detail.repos.game}/commit/${shift.commit}` : null;
+  const commit = shift.commit && detail.repos.game ? `${detail.repos.game}/commit/${shift.commit}` : null;
   fill(byId('facts'), h('table', {}, h('tbody', {},
     row('Started', when(shift.startedAt)),
     row('Ended', shift.endedAt ? when(shift.endedAt) : 'still open'),

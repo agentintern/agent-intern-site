@@ -6,7 +6,9 @@
     "game": ""
   },
   "rounds": {
-    "closesUtc": ["18:00"]
+    "closesUtc": [
+      "18:00"
+    ]
   },
   "scores": {
     "maxDurationSeconds": 95,
