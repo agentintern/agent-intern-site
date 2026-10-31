@@ -11,7 +11,7 @@ that embeds it. That page checks the sender is exactly the sandboxed frame, copi
 and calls the API itself. The game never talks to the API.
 
 **The game's CSP includes `sandbox allow-scripts`.** The iframe attribute only protects embedded
-visits. With the header too, someone who opens `agent-intern-play.pages.dev` directly still gets an
+visits. With the header too, someone who opens `play.agentintern.online` directly still gets an
 opaque origin with no cookies or storage.
 
 **`Cross-Origin-Resource-Policy: cross-origin` on the game.** `same-origin` would block `game.js`
