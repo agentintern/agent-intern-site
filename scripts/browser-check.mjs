@@ -14,7 +14,9 @@ const LOCAL_GAME = `http://127.0.0.1:${GAME_PORT}`;
 const gameRoot = resolve('../agent-intern-game');
 
 const results = [];
-const check = (name, ok, detail = '') => {
+let engine = '';
+const check = (label, ok, detail = '') => {
+  const name = `${engine}${label}`;
   results.push({ name, ok: Boolean(ok) });
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? `  (${detail})` : ''}`);
 };
@@ -395,7 +397,14 @@ try {
       hostileServer = null;
       gameServer = await serveDist(join(gameRoot, 'dist'), { port: GAME_PORT, frameAncestors: SITE });
     }
+    // Every browser on an iPhone is WebKit, so it gets the full walk and not only the sandbox check.
+    engine = 'webkit: ';
     await directVisit(safari, gameUrl);
+    await pageChecks(safari);
+    // WebKit drops Secure cookies on http://localhost, so signing in only works here over real HTTPS.
+    if (remote) await boardFlow(safari);
+    await realGameChecks(safari);
+    engine = '';
     await safari.close();
   } else {
     console.log('skipped: WebKit is not available for this run');

@@ -21,13 +21,13 @@ they need two things from the owner. See [What's left](#whats-left). The site do
 
 ## What ran in production
 
-Run against the live URLs on 2026-10-31. The browser suite and Lighthouse were rerun on the real domain.
+Run against the live URLs on 2026-10-31. The browser suite, the gate's live check and Lighthouse ran on the real domain.
 The other rows ran on the `pages.dev` addresses, on the same code.
 
 | Check | Result |
 | --- | --- |
-| Browser suite in Chromium on the real domain: all pages, 375 px, no console errors, nothing from third parties, no token words, holder flow, the game in its sandbox | 81 of 81 |
-| The same suite in WebKit on the real domain | Not run yet: this machine's DNS cache still rejects the new domain, and WebKit can't bypass it. Passed on the `pages.dev` addresses. |
+| Browser suite on the real domain, in Chromium and in WebKit (the engine in Safari and every iPhone browser): all pages, 375 px, no console errors, nothing from third parties, no token words, holder flow with signing, the game in its sandbox | 150 of 150 |
+| The gate's live check on the real domain, desktop and phone sizes | Passed at 60 fps with no errors |
 | Attacks on the live site from inside the live frame: read the session, post a vote, read or overwrite the cookie, `document.domain` | All blocked. Real requests show the browser sends the cookie to the site and not to the game. |
 | A full round through the real API: signed task, screening, 3 signed votes, the lazy close, the queue | Worked, twice. Only the close time was moved. |
 | The real agent check on 24 tasks, 18 of them never used to tune it | 24 of 24 |
@@ -70,7 +70,7 @@ Unit tests: game 16, gate 65, site 119, shift tools 67.
 | Bypass for the merge | Whether `GITHUB_TOKEN` can be listed as a ruleset bypass on this kind of account is untested. |
 | A real shift: login in the container, `/shift`, the intern refusing a bad task | Only a person can do this. `CLAUDE.md` hasn't been tested on a live session, so this is the biggest open question. |
 | A person playing the game | "Fun" so far means bots and screenshots. |
-| A real mid-range phone | Only simulated with a CPU throttle. |
+| A real mid-range phone | Only simulated with a CPU throttle. WebKit ran on a Mac, not on an iPhone. |
 | A real wallet extension | Signing ran with test keys. The Wallet Standard and legacy paths are untested. |
 | A real mint | Off by design. The default public RPC may refuse Cloudflare, so a free RPC key in `RPC_URL` is likely needed. |
 
