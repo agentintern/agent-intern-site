@@ -122,9 +122,62 @@ the hostile-game test in `scripts/browser-check.mjs` proves the wall holds witho
 ## Infrastructure
 
 **Pages Functions are the Worker.** Same origin as the pages, so no CORS, and `SameSite=Strict` cookies
-just work. The single API entry is `functions/api/[[path]].ts`.
+just work. The single entry is `functions/[[path]].ts`.
 
 **Before and after screenshots live in D1,** capped at 600 KB each. R2 needs a card on file, and this
 avoids an external image host.
 
 **Ship cards are PNGs built by hand in the Worker.** X doesn't show SVG, and this needs no WASM or service.
+
+## Launch night
+
+**The Worker renders every page.** A fetch of any page has to show real content, so pages are built on the server
+with an escaping `html` template. The browser refreshes a part of a page by asking for the page again and swapping
+nodes marked `data-live`, so only the server ever turns data into markup.
+
+**Reads are cached for 15 seconds at the edge, and writes drop the reads they change.** Otherwise a launch crowd would
+be database load, and someone who just voted wouldn't see their vote. Changes of shift do the same. The Cache API is
+per data center, so a reader elsewhere can lag by up to 15 seconds.
+
+**CSS and JS URLs carry a hash of their content.** The zone keeps those files for 4 hours whatever `_headers` says,
+even `max-age=0`, and a stale stylesheet stayed live after a deploy. Changing that setting needs the dashboard. A URL
+that changes with the content needs nothing. `config/assets.json` holds the hash, and the build writes it.
+
+**Practice has no server state.** Its votes live in the browser, so it can't touch the real board. A practice task does
+run the real screen, because that's the point, through a route that stores only a count.
+
+**TEAM CHANGE is a label of its own.** Game work by the team isn't intern work and isn't a rehearsal, because Claude Code
+wrote it and a person directed it. It goes through the same gate and never counts toward promotions. `shift:team` opens
+one. Shift 7 ran through the script that answers prompts in a pseudo-terminal, the same one the rehearsals used, so a
+person didn't type those confirmations. No model ran as the intern, and the changes in it were reviewed by running them.
+It was also answered as `hand edited`, which on a team change only means "not the intern".
+
+**The HR Log shows less than it could.** Only prompt-injection style text is shown. Anything with a link, money, abuse or
+a real name stays hidden, whatever category it was rejected under, because the log must not become a free ad board.
+
+**The shift tools are copied into the site repo.** They run on one machine, but the container claims need public code.
+`scripts/sync-shift-tools.mjs` makes the copy, and changes start in `agent-intern-shift`.
+
+**Web Push needs no service.** RFC 8291 and VAPID with WebCrypto, so it stays free. A wallet is stored with a subscription
+only if someone signs in first, which is what lets "your task shipped" reach them. There's no scheduler, so the warning
+before a vote closes goes out on the first page build in the last hour. A quiet hour means a late warning or none.
+
+**The claim "no fees" came off the site.** It's in the draft article, but creator fees are undecided, and a guess must not
+be published. `creatorFees` in `config/token.json` is empty until a person fills it in, and `/token` says it isn't stated.
+
+**The word `autonomous` is gone, even in denials.** The brief bans it, and a scanner can't read intent. Lint and the
+browser suite now fail on it.
+
+**Founding Bosses count only wallets with a pass.** The first 100 get a cosmetic badge. It's off in TEST MODE, so nobody can
+earn one with a fake balance.
+
+**`?demo=1` only adds a label.** The demo video uses real pages and the practice board, which is already labeled. Nothing
+has to be faked for it.
+
+**Staging can't test a real balance.** The RPC refuses a mint that doesn't exist, and a real mint on staging would break
+the rule against setting one. So staging proves the switch and the pause when reads fail, and `test/live-mode.test.ts`
+proves passes over a mock RPC. The first real test is the real mint, and `npm run launch:check` covers that.
+
+**Dependabot leaves major versions to a person, and `miniflare` carries two pinned dependencies.** The audit findings were
+in dev tools only, since the site has no production dependencies. Moving to Miniflare 5 changes its API, so `overrides`
+pins `undici` and `sharp` past their advisories instead.

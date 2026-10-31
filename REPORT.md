@@ -5,7 +5,29 @@
 TEST MODE. No mint is set, and token features are compiled out. Both are live on Cloudflare.
 
 **Not finished.** The whole pipeline ran for real on GitHub and Cloudflare, but no intern has worked a shift
-yet. Every shift so far is a labeled rehearsal. See [What's left](#whats-left).
+yet. The history holds labeled rehearsals, a team change and a shift nobody worked. See [What's left](#whats-left).
+
+Shift 5's rollback is confirmed: `rolled-back` on the site, its pull request closed, and `main` clean.
+
+## Launch night, 2026-10-31
+
+| Check | Result |
+| --- | --- |
+| Browser suite on production: every page and flow at 375, 768 and 1440 px, in Chromium and WebKit | 312 of 312 |
+| Browser suite on a local stack, with a hostile game in the real sandbox | 309 of 309 |
+| Lighthouse mobile on `/`, `/board`, `/proof` and `/play` | Performance 99 to 100, the other three 100, CLS 0.009 at most |
+| JS on the home page | 8.2 KB gzipped, budget 100 KB |
+| Game | 18.4 KB gzipped, budget 500 KB |
+| Unit tests | Site 200, shift tools 68, gate 67, game 30 |
+| Attacks from inside the container, from a clean clone of the public repo | 49 of 49 |
+| The mint switch on staging, with a made-up mint in a temporary copy | TEST MODE off, `/token` on, chip on. Sign-in stops with a plain message, because reads fail for a mint that doesn't exist. |
+| Passes with a mint set, over a mock RPC | Tested in `test/live-mode.test.ts`, and not on staging. See `DECISIONS.md`. |
+| Reads at 100 times normal, on a local stack | 3000 reads, 100 at once: 1641 per second, p99 127 ms, none failed |
+| `shift:start` and `shift:finish` end to end with fake data on a local stack | Worked. Declining the push pushed nothing, and a refusal posted. |
+| `/shift/7`, a team change through the real gate | Shipped `0.1.7`, labeled TEAM CHANGE |
+| Real browser push | Not tested. The encryption is, by decrypting a message. |
+| Secret scan of the full history of both repos | Clean |
+| `npm audit` in both repos | 0 vulnerabilities |
 
 Repos: https://github.com/agentintern/agent-intern-game and https://github.com/agentintern/agent-intern-site
 
@@ -14,7 +36,7 @@ Repos: https://github.com/agentintern/agent-intern-game and https://github.com/a
 | Part | What it is |
 | --- | --- |
 | Game | *Last Day at the Office*: a 90 second top-down run. Art, font and sound are generated in code, with keyboard and touch. |
-| Site | Home, play, board, live, history, shift pages, how, about, status and changelog, on Pages, Functions and D1. |
+| Site | Every page rendered in the Worker, on Pages, Functions and D1, with proof, practice, HR Log, promotions, boss and task pages, ship cards, Web Push and a read-only MCP endpoint. |
 | Voting | Signed plain messages, screening by rules and then Workers AI, votes re-checked at close, a public record. |
 | Shift tools | `shift:start`, `shift:open`, `shift:finish`, plus `shift:pause` and `shift:status`, and the container with its egress proxy. |
 | Gate | `gate.yml` and its scripts: an allowlist of paths, secret scan, build, unit tests, a 60 second browser test, deploy, live check, rollback. |
@@ -41,7 +63,6 @@ The other rows ran on the `pages.dev` addresses, on the same code.
 | The gate on GitHub, a broken deploy: code that only fails on the live address, so CI passes | The live check caught it and the workflow rolled back to `0.1.4` by itself. The bad build was live for about a minute. Nothing reached `main`. |
 | The rollback by hand, before the workflow could run | Same commands, 26 s |
 | Lighthouse mobile on the real domain, 3 runs | Performance, accessibility, best practices and SEO all 100 |
-| Home page JS | 6.6 KB gzipped, budget 80 KB |
 | Game | 60 fps in headless Chromium, including at 4x CPU throttle |
 
 **Rehearsals are labeled because no intern ran.** Shifts 1 to 5 used the real commands and the real gate,
@@ -70,7 +91,6 @@ it is removed, `main` is back on its own commit, and the rulesets now have no ex
 | The real deploy key attacking the real repo | Refused on `main`, new branches and tags, and allowed on `shift/*`. An earlier run got through an admin exception. See below. |
 | Real mainnet RPC, read only | Summed 23 real accounts of a classic mint. A Token-2022 mint resolves through the same call, though that wallet held none. |
 
-Unit tests: game 16, gate 65, site 119, shift tools 67.
 
 ## What's left
 
@@ -80,7 +100,8 @@ Unit tests: game 16, gate 65, site 119, shift tools 67.
 | A person playing the game | "Fun" so far means bots and screenshots. |
 | A real mid-range phone | Only simulated with a CPU throttle. WebKit ran on a Mac, not on an iPhone. |
 | A real wallet extension | Signing ran with test keys. The Wallet Standard and legacy paths are untested. |
-| A real mint | Off by design. The default public RPC may refuse Cloudflare, so a free RPC key in `RPC_URL` is likely needed. |
+| A real mint | Off by design. `RPC_URL` is set in production. A mint that doesn't exist yet makes the RPC refuse, so voting pauses until it's real. |
+| Real Web Push | The encryption is tested, but no push service has delivered one. |
 
 ## Known limits
 
@@ -91,6 +112,8 @@ Unit tests: game 16, gate 65, site 119, shift tools 67.
   are the wall, and those are out of a shift's reach.
 - **The agent check can still be fooled.** In the benchmark it missed 1 of 14 attacks, a well-known
   character described without its name. You read each task at `shift:start`, and the intern can refuse.
+- **The warning before a vote closes depends on traffic.** With no scheduler, it goes out on the first page build in
+  the last hour.
 - **Balances are read on the first request after close,** not at the exact second. See `DECISIONS.md`.
 - **Request budget.** The Cloudflare account's plan includes 10M requests and 30M ms of CPU a month, shared
   with every other project on the account. Use past that is billed, not cut off, and `/live` is about 360
