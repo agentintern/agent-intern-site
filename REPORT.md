@@ -32,6 +32,12 @@ layers `docs/THREAT-MODEL.md` describes.
 | `gh secret list` on the repo | GitHub | 0 secrets. All 3 are on `production` |
 | `live check` required on `main` | GitHub | Added. A maintenance pull request with it skipped still shows as ready to merge |
 | A push ruleset on `.github/**` | GitHub | Refused: "Source public repos cannot have push rules", and only org-owned repos can have them |
+| The site's CI on the commit before this line | GitHub | Green |
+| `/proof` after `npm run deploy` | Production | The new limit is live, with TEST MODE and no open shift |
+
+**One thing found late.** `npm run setup` still wrote the secrets to the repo, so running it again would have reopened this.
+It now writes to `production`, with a test. The site's one push had already gone, so the public copy in `shift-tools/` catches
+up with the next push.
 
 **The login in the container works.** `npm run shift:login` opened the real container with an empty folder, a person logged
 in, and the model answered through the proxy. No shift was opened. `/status` says `Claude API account`, but the login is a

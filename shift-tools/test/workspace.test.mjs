@@ -380,6 +380,14 @@ describe('shift:finish, the real command', { skip: !hasTerminal && 'no script co
   });
 });
 
+describe('the deploy secrets', () => {
+  it('only ever go on the production Environment', () => {
+    const calls = readFileSync(join(ROOT, 'scripts/setup.mjs'), 'utf8').match(/\['secret', 'set'[^\]]*\]/g);
+    assert.equal(calls.length, 1);
+    assert.match(calls[0], /'--env', 'production'/);
+  });
+});
+
 describe('RESULT.json', () => {
   it('reads a good result', () => {
     reset();

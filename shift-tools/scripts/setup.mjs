@@ -21,7 +21,8 @@ const tokenFile = join(resolve(SECRETS_FILE, '..'), 'cloudflare_token');
 
 const run = (cmd, args, opts = {}) => execFileSync(cmd, args, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'], ...opts }).trim();
 const has = (cmd, args) => spawnSync(cmd, args, { stdio: 'ignore' }).status === 0;
-const setSecret = (name, value) => run('gh', ['secret', 'set', name, '--repo', gameRepo], { input: value });
+// On the Environment, never the repo: a workflow in a pushed branch can read repo-level secrets.
+const setSecret = (name, value) => run('gh', ['secret', 'set', name, '--env', 'production', '--repo', gameRepo], { input: value });
 
 const login = run('gh', ['api', 'user', '--jq', '.login']);
 if (login.toLowerCase() !== owner.toLowerCase()) {
