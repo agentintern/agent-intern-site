@@ -170,7 +170,8 @@ th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacin
 th, td { padding: 8px 10px 8px 0; border-top: 1px solid var(--rule); vertical-align: top; }
 th[scope="row"] { white-space: normal; width: 34%; }
 td.num, th.num { text-align: right; }
-tbody tr:first-child td { border-top: 2px solid var(--ink); }
+thead + tbody tr:first-child td { border-top: 2px solid var(--ink); }
+tbody:only-child tr:first-child td, tbody:only-child tr:first-child th { border-top: 0; }
 .break { word-break: break-all; }
 
 .feed { list-style: none; background: var(--desk); color: var(--on-desk); padding: 10px 12px; min-height: 240px; max-height: 460px; overflow-y: auto; font-size: 14px; }

@@ -36,7 +36,9 @@ function postText(shift: Shift): string {
     'rolled-back': `Shift ${shift.id} shipped "${task}", broke, and rolled back.`,
   };
   const credit = shift.kind === 'intern' ? "It was the intern's choice." : shift.proposer ? `Proposed by ${shift.proposer}.` : '';
-  return [lead[shift.status] ?? `Shift ${shift.id} is on: "${task}"`, credit, 'Holders vote, the intern ships it.', url].filter(Boolean).join('\n');
+  const rehearsal = shift.rehearsal ? 'Rehearsal only: a person ran this to test the pipeline. The intern did not run.' : '';
+  const handEdited = shift.handEdited ? 'A person edited this by hand.' : '';
+  return [lead[shift.status] ?? `Shift ${shift.id} is on: "${task}"`, rehearsal, handEdited, credit, 'Holders vote, the intern ships it.', url].filter(Boolean).join('\n');
 }
 
 function render(detail: Detail): void {
