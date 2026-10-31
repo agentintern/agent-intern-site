@@ -4,8 +4,10 @@
 
 TEST MODE. No mint is set, and token features are compiled out. Both are live on Cloudflare.
 
-**Not finished.** The repos are public at https://github.com/agentintern, but the gate hasn't run on GitHub
-yet and the first real shift hasn't happened. See [What's left](#whats-left).
+**Not finished.** The whole pipeline ran for real on GitHub and Cloudflare, but no intern has worked a shift
+yet. Every shift so far is a labeled rehearsal. See [What's left](#whats-left).
+
+Repos: https://github.com/agentintern/agent-intern-game and https://github.com/agentintern/agent-intern-site
 
 ## What was built
 
@@ -34,14 +36,18 @@ The other rows ran on the `pages.dev` addresses, on the same code.
 | The live feed with the real watcher: state, files and test counts | Worked |
 | A fake secret planted in a file name | Replaced by a public "removed" notice. Not in any public API. |
 | A refused shift and a failed shift on `/history` | Both show, labeled REHEARSAL, with ship cards |
-| A broken build deployed to the live game origin | The live check failed it, the Cloudflare rollback API restored the last good version in 26 s, and the check then passed. Commands run by hand. See below. |
+| The gate on GitHub, an attack: a shift editing its own workflow and adding a network call | Rejected with 6 reasons by the gate on `main`, which ignored the edited copy. Nothing deployed. |
+| The gate on GitHub, a clean change: rules, build, tests, 60 s of play on two sizes, deploy, live check, merge | All passed, and `0.1.4` went live. The gate merged it itself. 60 fps in CI, including the phone profile at 4x CPU throttle. |
+| The gate on GitHub, a broken deploy: code that only fails on the live address, so CI passes | The live check caught it and the workflow rolled back to `0.1.4` by itself. The bad build was live for about a minute. Nothing reached `main`. |
+| The rollback by hand, before the workflow could run | Same commands, 26 s |
 | Lighthouse mobile on the real domain, 3 runs | Performance, accessibility, best practices and SEO all 100 |
 | Home page JS | 6.6 KB gzipped, budget 80 KB |
 | Game | 60 fps in headless Chromium, including at 4x CPU throttle |
 
-**Rehearsals are labeled because no intern ran.** Shifts 1 and 2 used the real commands, but a person's
-script wrote `RESULT.json`. They're on `/history` as REHEARSAL. To clear them before launch, delete the
-rows in `shift_events`, `shifts` and `tasks`, in that order.
+**Rehearsals are labeled because no intern ran.** Shifts 1 to 5 used the real commands and the real gate,
+but a person made the changes and wrote `RESULT.json`. They're on `/history` as REHEARSAL. To clear them
+before launch, delete the rows in `gate_results`, `shift_media`, `shift_events`, `shifts` and `tasks`, in that
+order. `main` holds one rehearsal change: a note in `GAME.md`.
 
 **One mistake in production.** The first rollback drill left a broken build live for about 2 minutes,
 because a stale credential failed the lookup of the last good deployment and the drill script carried on.
@@ -70,7 +76,6 @@ Unit tests: game 16, gate 65, site 119, shift tools 67.
 
 | Item | Why it isn't done |
 | --- | --- |
-| The gate on GitHub, shipping through the Action, the Action's automatic rollback | Needs the repos and a scoped Cloudflare token. Each part ran separately, but never in sequence in CI. |
 | A real shift: login in the container, `/shift`, the intern refusing a bad task | Only a person can do this. `CLAUDE.md` hasn't been tested on a live session, so this is the biggest open question. |
 | A person playing the game | "Fun" so far means bots and screenshots. |
 | A real mid-range phone | Only simulated with a CPU throttle. WebKit ran on a Mac, not on an iPhone. |
@@ -93,5 +98,7 @@ Unit tests: game 16, gate 65, site 119, shift tools 67.
   CPU, nearly all of it from other projects, since this one launched that day.
 - **HTML isn't compressed.** `no-transform` keeps Cloudflare from injecting its analytics script, and it
   turns off edge compression for those pages too. A page is about 10 KB, and Lighthouse still scores 100.
+- **Changing the gate needs a person.** `main` only takes pull requests, with no exceptions, and those
+  need a person to review and merge. The gate's own merge is the only automatic path.
 - **The workspace folder is in iCloud Drive,** which has been writing conflict copies inside `.git`. No
   damage so far. Tokens and keys live in `~/.agent-intern`, outside iCloud.
