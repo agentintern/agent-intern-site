@@ -5,6 +5,7 @@
     "site": "https://github.com/agentintern/agent-intern-site",
     "game": "https://github.com/agentintern/agent-intern-game"
   },
+  "x": "https://x.com/agentinternn",
   "rounds": {
     "closesUtc": [
       "18:00"

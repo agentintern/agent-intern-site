@@ -2,6 +2,11 @@
 
 The game's versions are at https://agentintern.online/changelog. This file covers the site.
 
+## After launch night, 2026-10-31
+
+- Removed the TEST MODE ribbon from every page. Balances are still fake, and /board says so.
+- Added the project's X account to the footer.
+
 ## Launch night, 2026-10-31
 
 - Rebuilt the site as the office at night, with the robot intern and server-rendered pages.

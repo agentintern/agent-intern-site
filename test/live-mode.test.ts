@@ -56,6 +56,7 @@ describe('the single switch', () => {
     const page = String((await h.call('/board')).body);
     expect(page).toContain('data-test-mode="0"');
     expect(page).not.toContain('TEST MODE');
+    expect(page).not.toContain('Balances on this board are fake');
   });
 
   it('numbers the first wallets to sign a pass, and only wallets with a pass', async () => {

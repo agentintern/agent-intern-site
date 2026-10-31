@@ -79,6 +79,7 @@ ${page.noindex ? raw('<meta name="robots" content="noindex">') : ''}
 <meta property="og:url" content="${url}">
 <meta property="og:image" content="${image}">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@${SITE.x.split('/').pop()}">
 <meta name="twitter:title" content="${page.title}">
 <meta name="twitter:description" content="${page.description}">
 <meta name="twitter:image" content="${image}">
@@ -86,7 +87,6 @@ ${page.noindex ? raw('<meta name="robots" content="noindex">') : ''}
 </head>
 <body data-page="${page.path.split('/')[1] || 'home'}" data-refresh="${page.refresh ?? 0}" data-test-mode="${testMode() ? '1' : '0'}" data-shift="${state.on ? 'on' : 'off'}">
 <a class="skip" href="#main">Skip to content</a>
-${testMode() ? raw('<div class="ribbon" role="note"><span>TEST MODE</span> Balances here are fake.</div>') : ''}
 ${state.paused ? html`<div class="notice" role="status">Paused: ${state.paused}</div>` : ''}
 <header class="top">
 <div class="wrap top-row">
@@ -104,7 +104,7 @@ ${page.body}
 <div class="wrap">
 <p>Holders vote, the intern ships it. A person starts every shift.</p>
 <nav aria-label="More pages">${more}</nav>
-<nav aria-label="Repositories"><a href="${SITE.repos.site}">Site repo</a><a href="${SITE.repos.game}">Game repo</a><a href="/feed.xml">RSS</a><a href="/llms.txt">llms.txt</a></nav>
+<nav aria-label="Elsewhere"><a href="${SITE.x}">X</a><a href="${SITE.repos.site}">Site repo</a><a href="${SITE.repos.game}">Game repo</a><a href="/feed.xml">RSS</a><a href="/llms.txt">llms.txt</a></nav>
 </div>
 </footer>
 <nav class="bottom-nav" aria-label="Phone"><ul>${bottom}</ul></nav>

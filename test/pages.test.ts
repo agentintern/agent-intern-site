@@ -36,7 +36,7 @@ describe('every page, as a fetch sees it', () => {
       expect(text.startsWith('<!doctype html>')).toBe(true);
       expect(text).not.toMatch(/>Loading\.?</);
       expect((text.match(/<h1/g) ?? []).length).toBe(1);
-      expect(text).toContain('TEST MODE');
+      expect(text).toContain('https://x.com/agentinternn');
       expect(text.replace(/<[^>]+>/g, ' ')).not.toMatch(BANNED);
       expect(text.replace(/<[^>]+>/g, ' ')).not.toMatch(OVERCLAIMS);
       const csp = headers.get('content-security-policy') ?? '';
@@ -57,6 +57,11 @@ describe('every page, as a fetch sees it', () => {
     expect(text).toMatch(/Round<\/dt><dd>\d+, open/);
     expect(text).toContain('v0.1.0');
     expect(text).toContain('/proof');
+  });
+
+  it('says on the board that balances are fake, and in the status of the site', async () => {
+    expect((await page('/board')).text).toContain('Balances on this board are fake for now.');
+    expect((await page('/status')).text).toContain('TEST MODE');
   });
 
   it('answers a missing page with the empty desk', async () => {

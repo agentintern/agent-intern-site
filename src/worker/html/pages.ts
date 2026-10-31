@@ -174,6 +174,7 @@ ${rejected.length ? html`<ol class="plain">${rejected.map((p) => html`<li>A task
 <section class="badge-card" aria-labelledby="pass-title">
 <h2 id="pass-title">Your ID badge</h2>
 <div id="pass" data-threshold="${passLine()}"><p>Connect a Solana wallet and sign a plain message. It isn't a transaction and it costs nothing. A pass needs ${passLine()}.</p><p class="muted">Needs JavaScript. <a href="/practice">The practice board</a> needs no wallet.</p></div>
+${testMode() ? html`<p class="muted">Balances on this board are fake for now.</p>` : ''}
 </section>
 <section class="paper" aria-labelledby="propose-title">
 <h2 id="propose-title">Pin a task</h2>

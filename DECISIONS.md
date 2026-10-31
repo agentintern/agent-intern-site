@@ -84,6 +84,10 @@ constant removes them, so "mention no token anywhere" holds for the page source 
 an extension. It's generated in the tab, signs plain messages only, and isn't compiled into a live
 build.
 
+**The ribbon on every page came off, at the owner's request, before there's a mint.** The mode itself still
+depends only on the mint, so balances stay fake. `/board` keeps one line saying so, because that's where votes are
+cast and they must not read as real ones. `/status`, `/about`, `/practice` and the fake balance field say it too.
+
 ## The shift
 
 **A deploy key, not a personal token, for pushing, and rulesets with no bypass at all.** The first version

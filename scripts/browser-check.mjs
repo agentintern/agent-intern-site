@@ -145,7 +145,7 @@ async function pageChecks(browser) {
     const text = await page.evaluate(() => document.body.innerText);
     check(`${path} mentions no token in test mode`, !BANNED_WORDS.test(text), text.match(BANNED_WORDS)?.[0]);
     check(`${path} makes no banned claim`, !BANNED_CLAIMS.test(text));
-    check(`${path} shows TEST MODE`, /TEST MODE/.test(text));
+    if (path === '/board') check('/board says balances are fake', /Balances on this board are fake/.test(text));
     check(`${path} has one h1`, (await page.locator('h1').count()) === 1);
   }
   const sources = await page.evaluate(async () => {
