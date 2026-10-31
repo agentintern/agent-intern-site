@@ -5,45 +5,50 @@ const WIDTH = 640;
 const HEIGHT = 186;
 const EYE_WIDTH = 214;
 const EYE_HEIGHT = 74;
+const MARGIN = 44;
 
-interface Tint { edge: string; core: string; hot: string }
-const ORANGE: Tint = { edge: '#ff7a1c', core: '#ffb054', hot: '#fff2d8' };
+export type Tint = 'orange' | 'red';
+const COLORS: Record<Tint, { edge: string; core: string; hot: string; text: string }> = {
+  orange: { edge: '#ff7a1c', core: '#ffb054', hot: '#fff2d8', text: '#ffb054' },
+  red: { edge: '#e0241a', core: '#ff4a38', hot: '#ffd2c8', text: '#ff6a58' },
+};
 
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
-  ctx.beginPath();
-  ctx.roundRect(x, y, w, h, Math.min(r, h / 2));
+// One eye from the PFP: a rounded slit, its colour at the edge and white-hot through the middle.
+function paintEye(tint: Tint): HTMLCanvasElement {
+  const color = COLORS[tint];
+  const canvas = document.createElement('canvas');
+  canvas.width = EYE_WIDTH + MARGIN * 2;
+  canvas.height = EYE_HEIGHT + MARGIN * 2;
+  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+  const slit = (inset: number, insetY: number, radius: number, fill: string, blur: number): void => {
+    ctx.shadowColor = fill;
+    ctx.shadowBlur = blur;
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    ctx.roundRect(MARGIN + inset, MARGIN + insetY, EYE_WIDTH - inset * 2, EYE_HEIGHT - insetY * 2, radius);
+    ctx.fill();
+  };
+  slit(0, 0, 26, color.edge, 34);
+  slit(7, 7, 20, color.core, 14);
+  slit(28, 24, 12, color.hot, 10);
+  return canvas;
 }
 
-// One eye from the PFP: a rounded slit, orange at the edge and white-hot through the middle.
-function paintEye(tint: Tint): HTMLCanvasElement {
-  const margin = 44;
-  const canvas = document.createElement('canvas');
-  canvas.width = EYE_WIDTH + margin * 2;
-  canvas.height = EYE_HEIGHT + margin * 2;
-  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
-  ctx.shadowColor = tint.edge;
-  ctx.shadowBlur = 34;
-  ctx.fillStyle = tint.edge;
-  roundRect(ctx, margin, margin, EYE_WIDTH, EYE_HEIGHT, 26);
-  ctx.fill();
-  ctx.shadowBlur = 14;
-  ctx.shadowColor = tint.core;
-  ctx.fillStyle = tint.core;
-  roundRect(ctx, margin + 7, margin + 7, EYE_WIDTH - 14, EYE_HEIGHT - 14, 20);
-  ctx.fill();
-  ctx.shadowBlur = 10;
-  ctx.shadowColor = tint.hot;
-  ctx.fillStyle = tint.hot;
-  roundRect(ctx, margin + 28, margin + 24, EYE_WIDTH - 56, EYE_HEIGHT - 48, 12);
-  ctx.fill();
-  return canvas;
+export interface VisorState {
+  open: number; // 1 is a full eye, 0 a shut one.
+  look?: number; // -1 to 1, how far the eyes have moved across the screen.
+  brightness?: number;
+  tint?: Tint;
+  scan?: number; // 0 to 1, where the scanning bar is. Leave it out for no bar.
+  text?: string;
+  textMix?: number; // 0 shows the eyes, 1 hands the screen to the text.
 }
 
 // The screen in the visor. It only redraws when something on it changes, so a still robot costs no uploads.
 export class VisorScreen {
   readonly texture: CanvasTexture;
   private readonly ctx: CanvasRenderingContext2D;
-  private readonly eye = paintEye(ORANGE);
+  private readonly eyes: Record<Tint, HTMLCanvasElement> = { orange: paintEye('orange'), red: paintEye('red') };
   private drawn = '';
 
   constructor() {
@@ -57,10 +62,13 @@ export class VisorScreen {
   }
 
   // Our bitmap font, so anything the visor says matches the rest of the site.
-  private text(value: string, centerX: number, y: number, scale: number, color: string): void {
+  private write(value: string, scale: number, color: string): void {
     const chars = value.toUpperCase();
-    let x = centerX - (chars.length * 6 * scale) / 2;
+    let x = Math.round((WIDTH - (chars.length * 6 - 1) * scale) / 2);
+    const y = Math.round((HEIGHT - 7 * scale) / 2);
     this.ctx.fillStyle = color;
+    this.ctx.shadowColor = color;
+    this.ctx.shadowBlur = 12;
     for (const char of chars) {
       GLYPHS[char]?.forEach((bits, row) => {
         for (let col = 0; col < 5; col++) {
@@ -69,22 +77,44 @@ export class VisorScreen {
       });
       x += 6 * scale;
     }
+    this.ctx.shadowBlur = 0;
   }
 
-  // open: 1 is a full eye and 0 a shut one. look: -1 to 1, how far the eyes have moved across the screen.
-  draw(open: number, look = 0, line = ''): void {
-    const state = `${open.toFixed(2)}|${look.toFixed(2)}|${line}`;
-    if (state === this.drawn) return;
-    this.drawn = state;
-    const { ctx, eye } = this;
+  draw({ open, look = 0, brightness = 1, tint = 'orange', scan, text = '', textMix = 0 }: VisorState): void {
+    const key = `${open.toFixed(2)}|${look.toFixed(2)}|${brightness.toFixed(2)}|${tint}|${scan?.toFixed(3) ?? ''}|${textMix.toFixed(2)}|${textMix > 0 ? text : ''}`;
+    if (key === this.drawn) return;
+    this.drawn = key;
+    const { ctx } = this;
+    const eye = this.eyes[tint];
+    ctx.globalAlpha = 1;
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
-    const h = Math.max(0.06, open) * eye.height;
-    const y = (HEIGHT - h) / 2;
-    const shift = look * 22;
-    ctx.drawImage(eye, 171 - eye.width / 2 + shift, y, eye.width, h);
-    ctx.drawImage(eye, 469 - eye.width / 2 + shift, y, eye.width, h);
-    if (line) this.text(line, WIDTH / 2, HEIGHT - 24, 2, '#ff9a3c');
+
+    const eyes = 1 - textMix;
+    if (eyes > 0.01) {
+      const h = Math.max(0.05, open) * eye.height;
+      const y = (HEIGHT - h) / 2;
+      const shift = look * 24;
+      ctx.globalAlpha = Math.min(1, brightness) * eyes;
+      ctx.drawImage(eye, 171 - eye.width / 2 + shift, y, eye.width, h);
+      ctx.drawImage(eye, 469 - eye.width / 2 + shift, y, eye.width, h);
+    }
+    if (scan !== undefined) {
+      const x = scan * WIDTH;
+      const bar = ctx.createLinearGradient(x - 46, 0, x + 46, 0);
+      bar.addColorStop(0, 'rgba(255,176,84,0)');
+      bar.addColorStop(0.5, 'rgba(255,190,110,0.5)');
+      bar.addColorStop(1, 'rgba(255,176,84,0)');
+      ctx.globalAlpha = eyes;
+      ctx.fillStyle = bar;
+      ctx.fillRect(x - 46, 0, 92, HEIGHT);
+    }
+    if (textMix > 0 && text) {
+      ctx.globalAlpha = textMix;
+      const scale = Math.max(2, Math.min(9, Math.floor((WIDTH - 48) / (text.length * 6))));
+      this.write(text, scale, COLORS[tint].text);
+    }
+    ctx.globalAlpha = 1;
     this.texture.needsUpdate = true;
   }
 }

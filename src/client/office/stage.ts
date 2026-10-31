@@ -1,8 +1,9 @@
 import {
-  AdditiveBlending, BoxGeometry, BufferAttribute, BufferGeometry, CanvasTexture, Color, CylinderGeometry, DirectionalLight, Group,
+  AdditiveBlending, BoxGeometry, DoubleSide, InstancedMesh, Matrix4, BufferAttribute, BufferGeometry, CanvasTexture, Color, CylinderGeometry, DirectionalLight, Group,
   HemisphereLight, LineBasicMaterial, LineSegments, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, PlaneGeometry, PointLight,
   Scene, SpotLight, Sprite, SpriteMaterial, SRGBColorSpace, Vector3, type Material,
 } from 'three';
+import { GLYPHS } from '../../shared/font';
 import { densify, loft, plate, roundedProfile, roundedRect, smoothRings, tube } from './shapes';
 import { softGlow, type Surfaces } from './surfaces';
 
@@ -35,13 +36,40 @@ function dentedBox(w: number, h: number, d: number, dents: [number, number, numb
   return geometry;
 }
 
-function buildDrawer(s: Surfaces, w: number, h: number, seed: number): Group {
-  const drawer = new Group();
+function bitmapText(ctx: CanvasRenderingContext2D, value: string, x: number, y: number, scale: number, color: string): void {
+  ctx.fillStyle = color;
+  let at = x;
+  for (const char of value.toUpperCase()) {
+    GLYPHS[char]?.forEach((bits, row) => {
+      for (let col = 0; col < 5; col++) {
+        if (bits & (1 << (4 - col))) ctx.fillRect(at + col * scale, y + row * scale, scale, scale);
+      }
+    });
+    at += 6 * scale;
+  }
+}
+
+function canvasTexture(width: number, height: number): { ctx: CanvasRenderingContext2D; texture: CanvasTexture } {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const texture = new CanvasTexture(canvas);
+  texture.colorSpace = SRGBColorSpace;
+  texture.anisotropy = 4;
+  return { ctx: canvas.getContext('2d') as CanvasRenderingContext2D, texture };
+}
+
+interface Drawer { group: Group; rest: number; folders: InstancedMesh; label: { ctx: CanvasRenderingContext2D; texture: CanvasTexture } | null }
+
+const MAX_FOLDERS = 16;
+
+function buildDrawer(s: Surfaces, w: number, h: number, seed: number, labelled: boolean): Drawer {
+  const group = new Group();
   const lean = (seed % 3) * 0.006;
   const front = part(dentedBox(w, h, 0.12, [[(seed % 5) * 0.2 - 0.4, (seed % 2) * 0.1 - 0.06, 0.22, 0.03], [0.7 - seed * 0.12, 0.1, 0.14, 0.022]]), s.cabinet);
   front.position.z = -0.035;
-  drawer.add(front);
-  drawer.rotation.x = lean;
+  group.add(front);
+  group.rotation.x = lean;
   const pull = part(tube([
     { at: new Vector3(-0.24, -0.07, 0.03), rx: 0.016 },
     { at: new Vector3(-0.22, -0.07, 0.085), rx: 0.018 },
@@ -49,18 +77,34 @@ function buildDrawer(s: Surfaces, w: number, h: number, seed: number): Group {
     { at: new Vector3(0.22, -0.07, 0.085), rx: 0.018 },
     { at: new Vector3(0.24, -0.07, 0.03), rx: 0.016 },
   ], 10, 5), s.steel);
-  pull.position.y = -h * 0.08;
-  drawer.add(pull);
-  const holder = part(plate(roundedRect(0.5, 0.15, 0.014, 2), () => 0.025, { lift: 0.012, edge: 0.012, rings: 2 }), s.steel, false);
-  holder.position.y = h * 0.24;
-  drawer.add(holder);
-  const label = part(plate(roundedRect(0.44, 0.1, 0.005, 2), () => 0.025, { lift: 0.018, edge: 0.002, rings: 2 }), s.paper, false);
-  label.position.y = h * 0.24;
-  drawer.add(label);
-  return drawer;
+  pull.position.y = -h * 0.18;
+  group.add(pull);
+  const holder = part(plate(roundedRect(1.02, 0.21, 0.016, 2), () => 0.025, { lift: 0.012, edge: 0.012, rings: 2 }), s.steel, false);
+  holder.position.y = h * 0.16;
+  group.add(holder);
+  const label = labelled ? canvasTexture(512, 96) : null;
+  const card = part(plate(roundedRect(0.95, 0.158, 0.006, 2), () => 0.025, { lift: 0.018, edge: 0.002, rings: 2 }), new MeshStandardMaterial({ color: '#ffffff', roughness: 0.82, map: label?.texture ?? null }), false);
+  if (!label) (card.material as MeshStandardMaterial).color.set('#f5ebd8');
+  card.position.y = h * 0.16;
+  group.add(card);
+
+  // Behind the front: a tray, with one folder for every shift in this drawer.
+  const tray = part(new BoxGeometry(w - 0.14, 0.02, 1.05), s.joint, false);
+  tray.position.set(0, -h * 0.42, -0.6);
+  group.add(tray);
+  const folders = new InstancedMesh(new BoxGeometry(w - 0.3, h * 0.6, 0.012), s.paper, MAX_FOLDERS);
+  folders.count = 0;
+  folders.castShadow = false;
+  const place = new Matrix4();
+  for (let i = 0; i < MAX_FOLDERS; i++) {
+    place.makeTranslation(0, -h * 0.12 + (i % 3) * 0.008, -0.18 - i * 0.055);
+    folders.setMatrixAt(i, place);
+  }
+  group.add(folders);
+  return { group, rest: 0, folders, label };
 }
 
-function buildCabinet(s: Surfaces, w: number, h: number, d: number, drawers: number, dents: [number, number, number, number][]): Group {
+function buildCabinet(s: Surfaces, w: number, h: number, d: number, count: number, dents: [number, number, number, number][], labelled: boolean): { cabinet: Group; drawers: Drawer[] } {
   const cabinet = new Group();
   const body = part(dentedBox(w, h, d, dents), s.cabinet);
   body.position.y = h / 2;
@@ -76,13 +120,16 @@ function buildCabinet(s: Surfaces, w: number, h: number, d: number, drawers: num
   foot.position.y = -0.04;
   cabinet.add(foot);
   const margin = 0.044;
-  const each = (h - margin * (drawers + 1)) / drawers;
-  for (let i = 0; i < drawers; i++) {
-    const drawer = buildDrawer(s, w - 0.15, each, i + drawers);
-    drawer.position.set(0, h - margin - each / 2 - i * (each + margin), d / 2 + 0.03);
-    cabinet.add(drawer);
+  const each = (h - margin * (count + 1)) / count;
+  const drawers: Drawer[] = [];
+  for (let i = 0; i < count; i++) {
+    const drawer = buildDrawer(s, w - 0.15, each, i + count, labelled);
+    drawer.rest = d / 2 + 0.03;
+    drawer.group.position.set(0, h - margin - each / 2 - i * (each + margin), drawer.rest);
+    cabinet.add(drawer.group);
+    drawers.push(drawer);
   }
-  return cabinet;
+  return { cabinet, drawers };
 }
 
 function buildCrt(s: Surfaces): { crt: Group; screen: MeshStandardMaterial } {
@@ -153,6 +200,74 @@ function buildLamp(s: Surfaces): Group {
   head.add(glow);
   lamp.add(head);
   return lamp;
+}
+
+// A keyboard on an arm that comes up out of the cabinet for a shift.
+function buildKeyboardArm(s: Surfaces): Group {
+  const arm = new Group();
+  const pole = part(new CylinderGeometry(0.03, 0.03, 1.7, 14), s.gunmetal);
+  pole.position.y = 0.8;
+  arm.add(pole);
+  const tray = part(block(1.46, 0.04, 0.5, 0.012), s.gunmetal);
+  tray.position.set(0, 1.62, 0.12);
+  arm.add(tray);
+  const board = part(block(1.28, 0.05, 0.4, 0.016), s.plastic);
+  board.position.set(0, 1.67, 0.12);
+  arm.add(board);
+  const keys = part(new BoxGeometry(1.16, 0.022, 0.31), s.joint, false);
+  keys.position.set(0, 1.7, 0.12);
+  arm.add(keys);
+  return arm;
+}
+
+interface Notes { group: Group; step(dt: number, time: number): void }
+
+// Yellow stickies drift past behind the robot during a shift. They carry no writing, so they can't claim anything.
+function buildNotes(): Notes {
+  const group = new Group();
+  const { ctx, texture } = canvasTexture(128, 128);
+  ctx.fillStyle = '#ffd84a';
+  ctx.fillRect(0, 0, 128, 128);
+  ctx.fillStyle = 'rgba(11,16,32,0.22)';
+  for (let y = 34; y < 110; y += 22) ctx.fillRect(20, y, 88, 4);
+  const material = new MeshStandardMaterial({ map: texture, roughness: 0.8, side: DoubleSide });
+  const shape = new PlaneGeometry(0.5, 0.5);
+  const notes = Array.from({ length: 7 }, (_, i) => {
+    const note = new Mesh(shape, material);
+    note.position.set(-6 + i * 1.9, 3.8 + ((i * 37) % 30) / 9, -1.5 - (i % 3) * 0.5);
+    group.add(note);
+    return { note, speed: 0.34 + (i % 3) * 0.1, phase: i * 1.7 };
+  });
+  return {
+    group,
+    step(dt, time) {
+      for (const { note, speed, phase } of notes) {
+        note.position.x += speed * dt;
+        if (note.position.x > 6.5) note.position.x = -6.5;
+        note.position.y += Math.sin(time * 0.9 + phase) * 0.0012;
+        note.rotation.set(Math.sin(time * 0.7 + phase) * 0.22, Math.sin(time * 0.5 + phase) * 0.5, Math.sin(time * 0.4 + phase) * 0.2);
+      }
+    },
+  };
+}
+
+// The stamp that lands on the top drawer. The word comes from the real result, and it stays until the state changes.
+function buildStamp(): { mesh: Mesh; word(value: string): void } {
+  const { ctx, texture } = canvasTexture(512, 170);
+  const mesh = new Mesh(new PlaneGeometry(1.0, 0.33), new MeshBasicMaterial({ map: texture, transparent: true, opacity: 0, depthWrite: false, toneMapped: false }));
+  mesh.rotation.z = -0.06;
+  return {
+    mesh,
+    word(value) {
+      ctx.clearRect(0, 0, 512, 170);
+      ctx.strokeStyle = '#d9402f';
+      ctx.lineWidth = 12;
+      ctx.strokeRect(10, 10, 492, 150);
+      const scale = Math.min(9, Math.floor(450 / (value.length * 6)));
+      bitmapText(ctx, value, Math.round((512 - (value.length * 6 - 1) * scale) / 2), Math.round((170 - 7 * scale) / 2), scale, '#d9402f');
+      texture.needsUpdate = true;
+    },
+  };
 }
 
 // The skyline from the pixel office, far away and very faint.
@@ -226,18 +341,44 @@ function buildRain(): { rain: LineSegments; step(dt: number): void } {
   return { rain, step };
 }
 
-export interface Stage { group: Object3D; step(dt: number): void; crtScreen: MeshStandardMaterial }
+export type DrawerCounts = [number, number, number, number];
+
+export interface Stage {
+  guide: LineSegments;
+  crtPosition: Vector3;
+  step(dt: number, time: number): void;
+  setDrawers(open: number): void;
+  setCounts(counts: DrawerCounts): void;
+  setGameShot(url: string, version: string): Promise<void>;
+  setShift(on: boolean): void;
+  stamp(word: string | null): void;
+  onThud: () => void;
+}
+
+const DRAWER_NAMES = ['shipped', 'refused', 'failed', 'rolled back'];
+
+// A drawer's label has its name from the start. The number only appears when real data arrives.
+function paintLabel(drawer: Drawer, index: number, count: string): void {
+  const { label } = drawer;
+  if (!label) return;
+  label.ctx.fillStyle = '#f5ebd8';
+  label.ctx.fillRect(0, 0, 512, 96);
+  bitmapText(label.ctx, DRAWER_NAMES[index] as string, 20, 26, 6, '#0b1020');
+  bitmapText(label.ctx, count, 492 - (count.length * 6 - 1) * 6, 26, 6, '#a8281a');
+  label.texture.needsUpdate = true;
+}
 
 export function buildStage(scene: Scene, s: Surfaces, robot: Object3D): Stage {
   const group = new Group();
   scene.add(group);
 
-  const main = buildCabinet(s, CABINET.w, CABINET.h, CABINET.d, 4, [[-0.55, 0.62, 0.34, 0.08], [0.5, -0.7, 0.26, 0.07], [0.82, 0.3, 0.18, 0.05], [-0.9, -0.5, 0.2, 0.05]]);
+  const { cabinet: main, drawers } = buildCabinet(s, CABINET.w, CABINET.h, CABINET.d, 4, [[-0.55, 0.62, 0.34, 0.08], [0.5, -0.7, 0.26, 0.07], [0.82, 0.3, 0.18, 0.05], [-0.9, -0.5, 0.2, 0.05]], true);
   group.add(main);
+  drawers.forEach((drawer, i) => paintLabel(drawer, i, ''));
   robot.position.set(0, CABINET.h + 0.05, 0.05);
   group.add(robot);
 
-  const side = buildCabinet(s, CRT_STAND.w, CRT_STAND.h, CRT_STAND.d, 2, [[0.3, 0.2, 0.26, 0.04]]);
+  const { cabinet: side } = buildCabinet(s, CRT_STAND.w, CRT_STAND.h, CRT_STAND.d, 2, [[0.3, 0.2, 0.26, 0.04]], false);
   side.position.set(CRT_STAND.x, 0, -0.5);
   side.rotation.y = -0.16;
   group.add(side);
@@ -251,13 +392,27 @@ export function buildStage(scene: Scene, s: Surfaces, robot: Object3D): Stage {
 
   const city = buildCity();
   group.add(city);
-  const { rain, step } = buildRain();
+  const { rain, step: stepRain } = buildRain();
   group.add(rain);
 
-  // The middle guide line lives in the scene, so it passes behind the robot rather than across its face.
-  const guide = new BufferGeometry();
-  guide.setAttribute('position', new BufferAttribute(new Float32Array([0, -6, -4, 0, 24, -4]), 3));
-  group.add(new LineSegments(guide, new LineBasicMaterial({ color: '#aeb8c8', transparent: true, opacity: 0.1, toneMapped: false, depthWrite: false })));
+  // The poster bakes in the middle guide line. On the live page it's a CSS line behind the canvas.
+  const guideLine = new BufferGeometry();
+  guideLine.setAttribute('position', new BufferAttribute(new Float32Array([0, -6, -4, 0, 24, -4]), 3));
+  const guide = new LineSegments(guideLine, new LineBasicMaterial({ color: '#aeb8c8', transparent: true, opacity: 0.1, toneMapped: false, depthWrite: false }));
+  guide.visible = false;
+  group.add(guide);
+
+  const keyboard = buildKeyboardArm(s);
+  keyboard.position.set(0, CABINET.h - 0.02 - 1.8, 0.8);
+  keyboard.visible = false;
+  group.add(keyboard);
+  const notes = buildNotes();
+  notes.group.visible = false;
+  group.add(notes.group);
+
+  const stampMark = buildStamp();
+  stampMark.mesh.position.set(0.12, -0.14, 0.12);
+  (drawers[0] as Drawer).group.add(stampMark.mesh);
 
   // The glow behind the head, from the PFP.
   const halo = new Sprite(new SpriteMaterial({ map: softGlow('rgba(255,140,50,0.7)', 'rgba(255,110,30,0.22)'), blending: AdditiveBlending, transparent: true, depthWrite: false, toneMapped: false }));
@@ -286,5 +441,79 @@ export function buildStage(scene: Scene, s: Surfaces, robot: Object3D): Stage {
   rimLow.position.set(-7, 1, 3);
   group.add(rimLow);
   group.add(new HemisphereLight(new Color('#26355f'), new Color('#0b1020'), 1.5));
-  return { group, step, crtScreen: screen };
+
+  let shiftOn = false;
+  let rise = 0;
+  let stampAt = -1;
+  let clock = 0;
+  const stage: Stage = {
+    guide,
+    crtPosition: new Vector3(CRT_STAND.x - 0.1, CRT_STAND.h + 0.85, -0.56),
+    onThud: () => undefined,
+    step(dt, time) {
+      clock = time;
+      stepRain(dt);
+      rise += ((shiftOn ? 1 : 0) - rise) * (1 - Math.exp(-dt * 3));
+      keyboard.visible = rise > 0.01;
+      keyboard.position.y = CABINET.h - 0.02 - 1.8 + rise * 1.8;
+      notes.group.visible = rise > 0.02;
+      if (notes.group.visible) notes.step(dt, time);
+      if (stampAt >= 0) {
+        const age = (time - stampAt) / 0.22;
+        const material = stampMark.mesh.material as MeshBasicMaterial;
+        if (age >= 1) {
+          stampMark.mesh.scale.setScalar(1);
+          material.opacity = 0.92;
+          stampAt = -1;
+          stage.onThud();
+        } else {
+          stampMark.mesh.scale.setScalar(2.6 - 1.6 * age * age);
+          material.opacity = age * 0.92;
+        }
+      }
+    },
+    setDrawers(open) {
+      drawers.forEach((drawer, i) => { drawer.group.position.z = drawer.rest + open * (0.62 - i * 0.07); });
+    },
+    setCounts(counts) {
+      drawers.forEach((drawer, i) => {
+        const count = counts[i] as number;
+        drawer.folders.count = Math.min(MAX_FOLDERS, count);
+        drawer.folders.instanceMatrix.needsUpdate = true;
+        paintLabel(drawer, i, String(count));
+      });
+    },
+    async setGameShot(url, version) {
+      const image = new Image();
+      image.src = url;
+      await image.decode();
+      const { ctx, texture } = canvasTexture(640, 468);
+      const scale = Math.max(640 / image.naturalWidth, 468 / image.naturalHeight);
+      const w = image.naturalWidth * scale;
+      const h = image.naturalHeight * scale;
+      ctx.drawImage(image, (640 - w) / 2, (468 - h) / 2, w, h);
+      ctx.fillStyle = 'rgba(0,0,0,0.16)';
+      for (let y = 0; y < 468; y += 3) ctx.fillRect(0, y, 640, 1);
+      const tag = `V${version}`;
+      ctx.fillStyle = '#0b1020';
+      ctx.fillRect(14, 424, tag.length * 18 + 14, 34);
+      bitmapText(ctx, tag, 21, 431, 3, '#ff9a3c');
+      screen.emissive.set('#ffffff');
+      screen.emissiveMap = texture;
+      screen.emissiveIntensity = 0.9;
+      screen.needsUpdate = true;
+    },
+    setShift(on) { shiftOn = on; },
+    stamp(word) {
+      const material = stampMark.mesh.material as MeshBasicMaterial;
+      if (!word) {
+        material.opacity = 0;
+        stampAt = -1;
+        return;
+      }
+      stampMark.word(word);
+      stampAt = clock;
+    },
+  };
+  return stage;
 }
