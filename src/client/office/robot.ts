@@ -421,17 +421,15 @@ const STYLES: Record<RobotState, Style> = {
 };
 
 function zTexture(): CanvasTexture {
-  const canvas = document.createElement('canvas');
-  canvas.width = 64;
-  canvas.height = 64;
-  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+  const canvas = new OffscreenCanvas(64, 64);
+  const ctx = canvas.getContext('2d') as OffscreenCanvasRenderingContext2D;
   ctx.fillStyle = '#d7dfeb';
   GLYPHS.Z?.forEach((bits, row) => {
     for (let col = 0; col < 5; col++) {
       if (bits & (1 << (4 - col))) ctx.fillRect(8 + col * 8, 4 + row * 8, 8, 8);
     }
   });
-  const texture = new CanvasTexture(canvas);
+  const texture = new CanvasTexture(canvas as unknown as HTMLCanvasElement);
   texture.colorSpace = SRGBColorSpace;
   return texture;
 }

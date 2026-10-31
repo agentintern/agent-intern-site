@@ -138,6 +138,33 @@ avoids an external image host.
 
 **Ship cards are PNGs built by hand in the Worker.** X doesn't show SVG, and this needs no WASM or service.
 
+## The office in 3D
+
+**The robot's visor is narrower than a screen and wider than the PFP's eyes.** The PFP has two slits in a steel face. The
+brief asked for a wide black visor. A narrow glossy band set into the steel keeps the PFP's face and still gives a screen
+for the countdown. It has a low vent on top, because the PFP has no antenna.
+
+**All of the 3D runs in a worker.** On the page's own thread, a cold visit lost almost 3 seconds to compiling three.js and
+building the scene, and Lighthouse fell to 68. With an OffscreenCanvas in a worker it holds 99, with no blocking time, and
+a slow phone keeps scrolling. The check for a real graphics chip is a worker too, because asking cost 1.4 seconds.
+
+**With no real graphics chip, the poster stays.** Software rendering runs on the CPU and costs far more than it's worth.
+
+**The robot's mood has one source: the state the server wrote into the page.** The pointer and clicks only make it react
+for a moment. `#stage-art[data-mood]` shows the result, which is how `scripts/browser-check.mjs` proves it.
+
+**The poster is asleep.** That's the real state whenever no shift is open. A poster that's awake would be wrong most of the
+time, and it's all that people with reduced motion or no graphics chip ever see.
+
+**Labels in stills have no numbers.** The poster is a fixed picture, so a count on it would go stale. Numbers only appear
+on the live drawers, from the page's data.
+
+**The drawers count every shift, and say so.** Shipped, refused, failed and rolled back include labeled rehearsals and team
+changes, so the panel states how many were real intern shifts.
+
+**three.js is bundled, not fetched.** It's pinned, it's a dev dependency in the sense that esbuild consumes it, and it reaches
+visitors inside `/js/office.js`. So its license notice stays in the bundle, and the SBOM now covers dev dependencies too.
+
 ## Launch night
 
 **The Worker renders every page.** A fetch of any page has to show real content, so pages are built on the server
@@ -188,5 +215,5 @@ the rule against setting one. So staging proves the switch and the pause when re
 proves passes over a mock RPC. The first real test is the real mint, and `npm run launch:check` covers that.
 
 **Dependabot leaves major versions to a person, and `miniflare` carries two pinned dependencies.** The audit findings were
-in dev tools only, since the site has no production dependencies. Moving to Miniflare 5 changes its API, so `overrides`
+in dev tools only. Moving to Miniflare 5 changes its API, so `overrides`
 pins `undici` and `sharp` past their advisories instead.

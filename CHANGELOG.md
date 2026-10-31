@@ -2,6 +2,13 @@
 
 The game's versions are at https://agentintern.online/changelog. This file covers the site.
 
+## The office in 3D, 2026-10-31
+
+- Rebuilt the home page as four chapters over native scrolling, with a 3D robot made in code.
+- The robot's mood comes from the real state: asleep, typing, stuck, shipped or refusing.
+- Added the 3D robot to /live, a still of it to the 404, and a render of it to the default share card.
+- Added guide lines, corner brackets, reveals and numbers that count up.
+
 ## After launch night, 2026-10-31
 
 - Removed the TEST MODE ribbon from every page. Balances are still fake, and /board says so.

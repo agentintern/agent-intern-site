@@ -19,6 +19,19 @@ await build({
   logLevel: 'error',
 });
 
+// The 3D office and three.js run in a worker of their own, so they never hold up the page.
+await build({
+  entryPoints: { office: 'src/client/office/worker.ts' },
+  bundle: true,
+  minify: true,
+  format: 'iife',
+  target: 'es2022',
+  outdir: 'dist/js',
+  // three.js ships to visitors, so its MIT notice has to ship with it.
+  legalComments: 'eof',
+  logLevel: 'error',
+});
+
 // Classic script: it runs in an opaque origin, where module scripts would need CORS.
 await build({
   entryPoints: { 'sandbox-try': 'src/client/sandbox-try.ts', 'gl-probe': 'src/client/gl-probe.ts' },
@@ -34,7 +47,7 @@ await build({
 // The zone keeps these two for 4 hours whatever they say, so the URL has to change when they do. Chunk names already
 // carry a hash, and app.js names them, so this covers all the JS.
 const hash = createHash('sha256');
-for (const file of ['dist/site.css', 'dist/js/app.js']) hash.update(await readFile(file));
+for (const file of ['dist/site.css', 'dist/js/app.js', 'dist/js/office.js']) hash.update(await readFile(file));
 await writeFile('config/assets.json', `${JSON.stringify({ version: hash.digest('hex').slice(0, 10) })}\n`);
 
 await rm('dist/_headers', { force: true });

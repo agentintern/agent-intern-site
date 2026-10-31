@@ -49,6 +49,9 @@ function reflections(renderer: WebGLRenderer): Scene['environment'] {
   return texture;
 }
 
+// What the page knows and the worker can't see for itself.
+export interface Size { width: number; height: number; ratio: number; wide: boolean }
+
 export interface OfficeFacts {
   closes: number; // When the vote closes, in ms. The visor counts down to this.
   last: string; // The last shift's result, for the visor.
@@ -56,9 +59,8 @@ export interface OfficeFacts {
 }
 
 export interface Office {
-  canvas: HTMLCanvasElement;
-  draw(time: number): void;
-  resize(): void;
+  draw(time: number, scrollY: number): void;
+  resize(size: Size): void;
   lower(): void;
   stop(): void;
   setMood(mood: RobotState): void;
@@ -89,16 +91,14 @@ const near = (story: number, chapter: number): number => Math.max(0, 1 - Math.ab
 
 const STAMPS: Partial<Record<RobotState, string>> = { celebrating: 'SHIPPED', refusing: 'REFUSED' };
 
-// Built in steps with a pause between them, so a slow phone can still scroll while this happens.
-export async function startOffice(host: HTMLElement, options: { pixelRatio?: number; opaque?: boolean; fixed?: boolean } = {}): Promise<Office> {
-  const renderer = new WebGLRenderer({ antialias: true, alpha: !options.opaque, powerPreference: 'high-performance' });
+// Built in steps with a pause between them. All of this runs in a worker on the page, so the page never waits for it.
+export async function startOffice(canvas: OffscreenCanvas | HTMLCanvasElement, first: Size, options: { opaque?: boolean; fixed?: boolean; coarse?: boolean } = {}): Promise<Office> {
+  const renderer = new WebGLRenderer({ canvas: canvas as HTMLCanvasElement, antialias: true, alpha: !options.opaque, powerPreference: 'high-performance' });
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = PCFShadowMap;
-  const canvas = renderer.domElement;
-  canvas.setAttribute('aria-hidden', 'true');
 
   const scene = new Scene();
   // Transparent over the page's night colour, so the guide lines can sit behind the robot.
@@ -119,18 +119,18 @@ export async function startOffice(host: HTMLElement, options: { pixelRatio?: num
   let height = 1;
   let frameHeight = 1;
   let wide = true;
-  let ratioCap = window.matchMedia('(pointer: coarse)').matches ? 1.5 : 2;
-  const resize = (): void => {
-    width = host.clientWidth;
-    height = host.clientHeight;
-    wide = window.matchMedia('(min-width: 960px)').matches;
+  let size = first;
+  let ratioCap = options.coarse ? 1.5 : 2;
+  const resize = (next: Size): void => {
+    size = next;
+    ({ width, height, wide } = next);
     // The same sum as --art-h in site.css. The frame is taller than the art on a phone, and starts at the top.
     frameHeight = wide || options.fixed ? height : Math.max(300, Math.min(0.58 * height, 1.18 * width)) * PHONE_ZOOM;
-    renderer.setPixelRatio(options.pixelRatio ?? Math.min(window.devicePixelRatio || 1, ratioCap));
+    renderer.setPixelRatio(Math.min(next.ratio, ratioCap));
     renderer.setSize(width, height, false);
     camera.aspect = width / frameHeight;
   };
-  resize();
+  resize(first);
 
   let storyTarget = 0;
   let story = 0;
@@ -155,10 +155,9 @@ export async function startOffice(host: HTMLElement, options: { pixelRatio?: num
   };
   place();
   await renderer.compileAsync(scene, camera);
-  host.append(canvas);
 
   let last = 0;
-  let scrollWas = window.scrollY;
+  let scrollWas = 0;
   let mood: RobotState = 'asleep';
   let facts: OfficeFacts = { closes: 0, last: '', counts: [0, 0, 0, 0] };
   let pointerX = -1;
@@ -175,15 +174,14 @@ export async function startOffice(host: HTMLElement, options: { pixelRatio?: num
     return [((p.x + 1) / 2) * width, ((1 - p.y) / 2) * height];
   };
   const office: Office = {
-    canvas,
     onThud: () => undefined,
     onKey: () => undefined,
-    draw(time) {
+    draw(time, scrollY) {
       const seconds = time / 1000;
       const dt = Math.max(0, seconds - last);
       last = seconds;
-      const moved = window.scrollY - scrollWas;
-      scrollWas = window.scrollY;
+      const moved = scrollY - scrollWas;
+      scrollWas = scrollY;
       story += (storyTarget - story) * (1 - Math.exp(-Math.min(dt, 0.05) * 6));
       if (Math.abs(storyTarget - story) < 1e-4) story = storyTarget;
       place();
@@ -220,19 +218,19 @@ export async function startOffice(host: HTMLElement, options: { pixelRatio?: num
       }
       renderer.render(scene, camera);
     },
-    resize() {
-      resize();
+    resize(next) {
+      resize(next);
       place();
     },
     lower() {
       renderer.shadowMap.enabled = false;
       scene.traverse((part) => { if (part instanceof Mesh) (part.material as MeshBasicMaterial).needsUpdate = true; });
       ratioCap = 1;
-      resize();
+      resize(size);
+      place();
     },
     stop() {
       renderer.dispose();
-      canvas.remove();
     },
     setMood(next) {
       if (next === mood) return;
@@ -248,13 +246,11 @@ export async function startOffice(host: HTMLElement, options: { pixelRatio?: num
     setGameShot: (url, version) => stage.setGameShot(url, version),
     setStory(chapter) { storyTarget = chapter; },
     pointer(x, y) {
-      const box = canvas.getBoundingClientRect();
-      pointerX = x - box.left;
-      pointerY = y - box.top;
+      pointerX = x;
+      pointerY = y;
       pointerAt = last;
     },
     hitsRobot(x, y) {
-      const box = canvas.getBoundingClientRect();
       robot.headAnchor.getWorldPosition(headSpot);
       sideSpot.copy(headSpot).setX(headSpot.x + 1);
       feetSpot.copy(headSpot).setY(CABINET.h);
@@ -262,9 +258,7 @@ export async function startOffice(host: HTMLElement, options: { pixelRatio?: num
       const [sx] = toScreen(sideSpot);
       const [, fy] = toScreen(feetSpot);
       const unit = Math.abs(sx - hx);
-      const px = x - box.left;
-      const py = y - box.top;
-      return Math.abs(px - hx) < unit * 1.1 && py > hy - unit * 0.7 && py < fy;
+      return Math.abs(x - hx) < unit * 1.1 && y > hy - unit * 0.7 && y < fy;
     },
     poke: () => robot.poke(),
     still(pose) {

@@ -1,20 +1,17 @@
 import type { RobotState } from '../shared/robot';
 import { reducedMotion } from './dom';
-import type { Office } from './office/index';
+import type { FromWorker, ToWorker } from './office/worker';
 import { hum, keyClick, stampThud } from './sound';
 
 // The robot is decoration over a poster that's already on screen. Nothing here can fail loudly: if the 3D can't run, or
 // can't keep up, the poster stays and the page reads the same.
-const SLOW_MS = 1000 / 40;
-const WATCH_MS = 3000;
-// This many frames in a row, each this slow, and it doesn't wait the 3 seconds.
-const HOPELESS_MS = 120;
-const HOPELESS_FRAMES = 6;
 const PROBE_MS = 4000;
 const MOODS: readonly string[] = ['asleep', 'working', 'thinking', 'stuck', 'panicking', 'celebrating', 'refusing'];
 
-let office: Office | null = null;
+let office: Worker | null = null;
 let story: HTMLElement | null = null;
+
+const tell = (message: ToWorker): void => office?.postMessage(message);
 
 function canRender(): Promise<boolean> {
   const { connection } = navigator as Navigator & { connection?: { saveData?: boolean } };
@@ -39,16 +36,19 @@ function readMood(): RobotState {
 
 export function syncStage(): void {
   const host = document.getElementById('stage-art');
-  if (!host || !office) return;
+  if (!host) return;
   const mood = readMood();
-  office.setMood(mood);
   host.dataset.mood = mood;
+  tell({ type: 'mood', mood });
   const record = document.getElementById('record-facts')?.dataset;
   const closes = Number(document.querySelector<HTMLElement>('[data-countdown]')?.dataset.countdown ?? 0);
-  office.setFacts({
-    closes,
-    last: record?.last ?? '',
-    counts: [Number(record?.shipped ?? 0), Number(record?.refused ?? 0), Number(record?.failed ?? 0), Number(record?.rolled ?? 0)],
+  tell({
+    type: 'facts',
+    facts: {
+      closes,
+      last: record?.last ?? '',
+      counts: [Number(record?.shipped ?? 0), Number(record?.refused ?? 0), Number(record?.failed ?? 0), Number(record?.rolled ?? 0)],
+    },
   });
 }
 
@@ -78,7 +78,7 @@ function startStory(): void {
       if (i === current) link.setAttribute('aria-current', 'true');
       else link.removeAttribute('aria-current');
     });
-    office?.setStory(position);
+    tell({ type: 'scroll', y: window.scrollY, story: position });
     if (strip?.parentElement && !reducedMotion()) {
       const spare = Math.max(0, strip.scrollWidth - strip.parentElement.clientWidth);
       const box = chapters[1]?.getBoundingClientRect();
@@ -127,103 +127,77 @@ function startTaskBox(): void {
   setTimeout(tick, 2600);
 }
 
-async function run(host: HTMLElement): Promise<void> {
-  const { startOffice } = await import('./office/index');
-  // The art takes the full screen behind the story before the canvas measures it.
+function measure(host: HTMLElement): { width: number; height: number; ratio: number; wide: boolean } {
+  return { width: host.clientWidth, height: host.clientHeight, ratio: window.devicePixelRatio || 1, wide: window.matchMedia('(min-width: 960px)').matches };
+}
+
+// Hands a canvas to the worker. From here on, nothing the 3D does can hold up this page.
+function run(host: HTMLElement): void {
+  const canvas = document.createElement('canvas');
+  canvas.setAttribute('aria-hidden', 'true');
+  // The art takes the full screen behind the story before it's measured.
   story?.classList.add('live');
-  const live = await startOffice(host, { fixed: !story });
-  office = live;
-  live.onThud = stampThud;
-  live.onKey = keyClick;
-  syncStage();
-  const shot = host.dataset.shot;
-  if (shot) void live.setGameShot(shot, host.dataset.shotVersion ?? '').catch(() => undefined);
-  window.dispatchEvent(new Event('scroll'));
+  host.append(canvas);
+  const worker = new Worker(host.dataset.worker ?? '');
+  office = worker;
 
-  let onScreen = true;
-  let frame = 0;
-  let last = 0;
-  let windowStart = 0;
-  let frames = 0;
-  let lowered = false;
-  let stopped = false;
-  let crawling = 0;
-
-  const quit = (): void => {
-    stopped = true;
-    cancelAnimationFrame(frame);
+  const giveUp = (): void => {
     host.classList.remove('live', 'ready');
     story?.classList.remove('live');
     hum(false);
     office = null;
-    window.setTimeout(() => live.stop(), 800);
+    window.setTimeout(() => {
+      worker.terminate();
+      canvas.remove();
+    }, 800);
   };
-
-  // Under 40 fps for 3 seconds, it drops the shadows and the resolution. If that's not enough, it goes back to the poster.
-  const watch = (time: number): void => {
-    if (!windowStart) windowStart = time;
-    frames += 1;
-    if (time - windowStart < WATCH_MS) return;
-    const slow = (time - windowStart) / frames > SLOW_MS;
-    windowStart = time;
-    frames = 0;
-    if (!slow) return;
-    if (lowered) {
-      quit();
+  worker.onerror = giveUp;
+  worker.onmessage = ({ data }: MessageEvent<FromWorker>) => {
+    if (data.type === 'ready') {
+      host.classList.add('live');
+      window.setTimeout(() => host.classList.add('ready'), 800);
+    } else if (data.type === 'thud') {
+      stampThud();
+    } else if (data.type === 'key') {
+      keyClick();
     } else {
-      lowered = true;
-      live.lower();
+      giveUp();
     }
   };
 
-  const tick = (time: number): void => {
-    if (stopped) return;
-    frame = 0;
-    if (!onScreen || document.hidden) {
-      hum(false);
-      return;
-    }
-    const gap = time - last;
-    last = time;
-    // A gap over 250 ms is the tab coming back, not a slow frame.
-    if (gap > 250) windowStart = 0;
-    crawling = gap > HOPELESS_MS && gap <= 250 ? crawling + 1 : 0;
-    if (crawling >= HOPELESS_FRAMES) {
-      quit();
-      return;
-    }
-    live.draw(time);
-    hum(true);
-    watch(time);
-    frame = requestAnimationFrame(tick);
-  };
-  const wake = (): void => {
-    if (!stopped && !frame && onScreen && !document.hidden) frame = requestAnimationFrame(tick);
-  };
+  const offscreen = canvas.transferControlToOffscreen();
+  worker.postMessage({ type: 'start', canvas: offscreen, size: measure(host), fixed: !story, coarse: window.matchMedia('(pointer: coarse)').matches } satisfies ToWorker, [offscreen]);
+  syncStage();
+  const shot = host.dataset.shot;
+  if (shot) tell({ type: 'shot', url: new URL(shot, location.href).href, version: host.dataset.shotVersion ?? '' });
+  window.dispatchEvent(new Event('scroll'));
 
+  let onScreen = true;
+  const report = (): void => {
+    const visible = onScreen && !document.hidden;
+    tell({ type: 'visible', visible });
+    hum(visible);
+  };
   new IntersectionObserver(([entry]) => {
     onScreen = Boolean(entry?.isIntersecting);
-    wake();
+    report();
   }).observe(host);
-  document.addEventListener('visibilitychange', wake);
-  new ResizeObserver(() => live.resize()).observe(host);
-  live.canvas.addEventListener('webglcontextlost', quit);
+  document.addEventListener('visibilitychange', report);
+  new ResizeObserver(() => tell({ type: 'size', size: measure(host) })).observe(host);
 
+  const inside = (event: MouseEvent): { x: number; y: number } => {
+    const box = host.getBoundingClientRect();
+    return { x: event.clientX - box.left, y: event.clientY - box.top };
+  };
   window.addEventListener('pointermove', (event) => {
-    if (event.pointerType === 'mouse') live.pointer(event.clientX, event.clientY);
+    if (event.pointerType === 'mouse') tell({ type: 'pointer', ...inside(event) });
   }, { passive: true });
   // A click or a tap on the robot itself. Anything that does something on the page keeps its click.
   document.addEventListener('click', (event) => {
     const target = event.target as HTMLElement;
     if (target.closest('a, button, input, textarea, select, label, .chapter-panel, .stage-text, header, footer, nav')) return;
-    live.pointer(event.clientX, event.clientY);
-    if (live.hitsRobot(event.clientX, event.clientY)) live.poke();
+    tell({ type: 'click', ...inside(event) });
   });
-
-  live.draw(performance.now());
-  host.classList.add('live');
-  window.setTimeout(() => host.classList.add('ready'), 800);
-  wake();
 }
 
 export function startStage(): void {
@@ -234,7 +208,7 @@ export function startStage(): void {
   startTaskBox();
   const begin = (): void => {
     requestAnimationFrame(() => setTimeout(() => {
-      void canRender().then((usable) => (usable ? run(host) : undefined)).catch(() => story?.classList.remove('live'));
+      void canRender().then((usable) => { if (usable) run(host); });
     }));
   };
   if (document.readyState === 'complete') begin();

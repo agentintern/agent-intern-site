@@ -69,3 +69,6 @@ MIT licensed. See [SECURITY.md](SECURITY.md), [CONTRIBUTING.md](CONTRIBUTING.md)
 ## Third-party
 
 The fonts in `public/fonts` are under the SIL Open Font License. Their license files sit next to them.
+
+The 3D office uses [three.js](https://threejs.org), under the MIT license. It's bundled into `/js/office.js` with its
+notice, and it's served from this site.

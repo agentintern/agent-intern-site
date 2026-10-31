@@ -13,7 +13,14 @@ writeFileSync(entry, `
 import { startOffice } from '${resolve('src/client/office/index')}';
 import { GLYPHS } from '${resolve('src/shared/font')}';
 
-const settle = (office, ms) => { for (let i = 0; i < ms / 16; i++) office.draw(400 + i * 16); };
+const settle = (office, ms) => { for (let i = 0; i < ms / 16; i++) office.draw(400 + i * 16, 0); };
+
+function open(host) {
+  const canvas = document.createElement('canvas');
+  host.append(canvas);
+  const size = { width: innerWidth, height: innerHeight, ratio: 1, wide: true };
+  return startOffice(canvas, size, { opaque: true, fixed: true }).then((office) => ({ office, canvas }));
+}
 
 function bitmap(ctx, value, x, y, scale, color) {
   ctx.fillStyle = color;
@@ -29,30 +36,30 @@ function bitmap(ctx, value, x, y, scale, color) {
 const views = {
   // Asleep, because that's the real state whenever no shift is open.
   async poster(host) {
-    const office = await startOffice(host, { pixelRatio: 1, opaque: true, fixed: true });
+    const { office, canvas } = await open(host);
     office.still('asleep');
     settle(office, 3000);
-    return office.canvas.toDataURL('image/webp', 0.92);
+    return canvas.toDataURL('image/webp', 0.86);
   },
   async shrug(host) {
-    const office = await startOffice(host, { pixelRatio: 1, opaque: true, fixed: true });
+    const { office, canvas } = await open(host);
     office.still('shrug');
     settle(office, 500);
     office.look(0, 5.5, 8.6, 0, 5.05, 0, 26);
-    office.draw(900);
-    return office.canvas.toDataURL('image/webp', 0.9);
+    office.draw(900, 0);
+    return canvas.toDataURL('image/webp', 0.9);
   },
   async card(host) {
-    const office = await startOffice(host, { pixelRatio: 1, opaque: true, fixed: true });
+    const { office, canvas } = await open(host);
     office.still('rest');
     settle(office, 500);
     office.look(-1.9, 6.0, 8.6, -1.42, 5.55, 0, 23);
-    office.draw(900);
+    office.draw(900, 0);
     const card = document.createElement('canvas');
-    card.width = office.canvas.width;
-    card.height = office.canvas.height;
+    card.width = canvas.width;
+    card.height = canvas.height;
     const ctx = card.getContext('2d');
-    ctx.drawImage(office.canvas, 0, 0);
+    ctx.drawImage(canvas, 0, 0);
     bitmap(ctx, 'WE HIRED AN', 56, 196, 7, '#eae6dc');
     bitmap(ctx, 'AI INTERN.', 56, 262, 7, '#eae6dc');
     bitmap(ctx, 'HOLDERS ARE', 56, 340, 7, '#ff9a3c');
@@ -75,7 +82,7 @@ const server = createServer((request, response) => {
   response.end('<!doctype html><style>body{margin:0}#host{width:100vw;height:100vh}canvas{display:block}</style><div id="host"></div><script type="module" src="/poster.js"></script>');
 }).listen(0);
 const browser = await chromium.launch({ args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
-for (const [name, file, width, height] of [['poster', 'robot-poster.webp', 1600, 1000], ['shrug', 'robot-shrug.webp', 800, 800], ['card', 'share-card.jpg', 1200, 630]]) {
+for (const [name, file, width, height] of [['poster', 'robot-poster.webp', 1280, 800], ['shrug', 'robot-shrug.webp', 800, 800], ['card', 'share-card.jpg', 1200, 630]]) {
   const page = await browser.newPage({ viewport: { width, height } });
   page.on('pageerror', (error) => console.log(String(error)));
   await page.goto(`http://localhost:${server.address().port}/`);

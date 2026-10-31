@@ -14,12 +14,10 @@ const COLORS: Record<Tint, { edge: string; core: string; hot: string; text: stri
 };
 
 // One eye from the PFP: a rounded slit, its colour at the edge and white-hot through the middle.
-function paintEye(tint: Tint): HTMLCanvasElement {
+function paintEye(tint: Tint): OffscreenCanvas {
   const color = COLORS[tint];
-  const canvas = document.createElement('canvas');
-  canvas.width = EYE_WIDTH + MARGIN * 2;
-  canvas.height = EYE_HEIGHT + MARGIN * 2;
-  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+  const canvas = new OffscreenCanvas(EYE_WIDTH + MARGIN * 2, EYE_HEIGHT + MARGIN * 2);
+  const ctx = canvas.getContext('2d') as OffscreenCanvasRenderingContext2D;
   const slit = (inset: number, insetY: number, radius: number, fill: string, blur: number): void => {
     ctx.shadowColor = fill;
     ctx.shadowBlur = blur;
@@ -47,16 +45,14 @@ export interface VisorState {
 // The screen in the visor. It only redraws when something on it changes, so a still robot costs no uploads.
 export class VisorScreen {
   readonly texture: CanvasTexture;
-  private readonly ctx: CanvasRenderingContext2D;
-  private readonly eyes: Record<Tint, HTMLCanvasElement> = { orange: paintEye('orange'), red: paintEye('red') };
+  private readonly ctx: OffscreenCanvasRenderingContext2D;
+  private readonly eyes: Record<Tint, OffscreenCanvas> = { orange: paintEye('orange'), red: paintEye('red') };
   private drawn = '';
 
   constructor() {
-    const canvas = document.createElement('canvas');
-    canvas.width = WIDTH;
-    canvas.height = HEIGHT;
-    this.ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
-    this.texture = new CanvasTexture(canvas);
+    const canvas = new OffscreenCanvas(WIDTH, HEIGHT);
+    this.ctx = canvas.getContext('2d') as OffscreenCanvasRenderingContext2D;
+    this.texture = new CanvasTexture(canvas as unknown as HTMLCanvasElement);
     this.texture.colorSpace = SRGBColorSpace;
     this.texture.anisotropy = 4;
   }

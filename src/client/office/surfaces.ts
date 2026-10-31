@@ -4,15 +4,14 @@ import {
 } from 'three';
 
 // All of the surface detail is painted in code, so the site ships no image or model files for it.
-type Paint = (ctx: CanvasRenderingContext2D, size: number) => void;
+type Ink = OffscreenCanvasRenderingContext2D;
+type Paint = (ctx: Ink, size: number) => void;
 
 function painted(size: number, paint: Paint, color = false, repeat: [number, number] = [1, 1]): Texture {
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+  const canvas = new OffscreenCanvas(size, size);
+  const ctx = canvas.getContext('2d') as Ink;
   paint(ctx, size);
-  const texture = new CanvasTexture(canvas);
+  const texture = new CanvasTexture(canvas as unknown as HTMLCanvasElement);
   texture.colorSpace = color ? SRGBColorSpace : NoColorSpace;
   texture.wrapS = RepeatWrapping;
   texture.wrapT = RepeatWrapping;
@@ -31,7 +30,7 @@ function seeded(seed: number): () => number {
 }
 
 // Long, straight, faint strokes are what make steel read as brushed.
-function brushStrokes(ctx: CanvasRenderingContext2D, size: number, angle: number, seed: number): void {
+function brushStrokes(ctx: Ink, size: number, angle: number, seed: number): void {
   const random = seeded(seed);
   ctx.fillStyle = '#8c8c8c';
   ctx.fillRect(0, 0, size, size);
@@ -53,7 +52,7 @@ function brushStrokes(ctx: CanvasRenderingContext2D, size: number, angle: number
   ctx.restore();
 }
 
-function scuffs(ctx: CanvasRenderingContext2D, size: number, count: number, seed: number): void {
+function scuffs(ctx: Ink, size: number, count: number, seed: number): void {
   const random = seeded(seed);
   for (let i = 0; i < count; i++) {
     ctx.strokeStyle = `rgba(255,255,255,${0.1 + random() * 0.22})`;

@@ -36,7 +36,9 @@ function dentedBox(w: number, h: number, d: number, dents: [number, number, numb
   return geometry;
 }
 
-function bitmapText(ctx: CanvasRenderingContext2D, value: string, x: number, y: number, scale: number, color: string): void {
+type Ink = OffscreenCanvasRenderingContext2D;
+
+function bitmapText(ctx: Ink, value: string, x: number, y: number, scale: number, color: string): void {
   ctx.fillStyle = color;
   let at = x;
   for (const char of value.toUpperCase()) {
@@ -49,17 +51,15 @@ function bitmapText(ctx: CanvasRenderingContext2D, value: string, x: number, y: 
   }
 }
 
-function canvasTexture(width: number, height: number): { ctx: CanvasRenderingContext2D; texture: CanvasTexture } {
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const texture = new CanvasTexture(canvas);
+function canvasTexture(width: number, height: number): { ctx: Ink; texture: CanvasTexture } {
+  const canvas = new OffscreenCanvas(width, height);
+  const texture = new CanvasTexture(canvas as unknown as HTMLCanvasElement);
   texture.colorSpace = SRGBColorSpace;
   texture.anisotropy = 4;
-  return { ctx: canvas.getContext('2d') as CanvasRenderingContext2D, texture };
+  return { ctx: canvas.getContext('2d') as Ink, texture };
 }
 
-interface Drawer { group: Group; rest: number; folders: InstancedMesh; label: { ctx: CanvasRenderingContext2D; texture: CanvasTexture } | null }
+interface Drawer { group: Group; rest: number; folders: InstancedMesh; label: { ctx: Ink; texture: CanvasTexture } | null }
 
 const MAX_FOLDERS = 16;
 
@@ -273,11 +273,7 @@ function buildStamp(): { mesh: Mesh; word(value: string): void } {
 
 // The skyline from the pixel office, far away and very faint.
 function buildCity(): Mesh {
-  const canvas = document.createElement('canvas');
-  canvas.width = 2048;
-  canvas.height = 512;
-  const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
-  ctx.clearRect(0, 0, 2048, 512);
+  const { ctx, texture } = canvasTexture(2048, 512);
   let seed = 19;
   const random = (): number => {
     seed = (seed * 16807) % 2147483647;
@@ -298,8 +294,7 @@ function buildCity(): Mesh {
     }
     x += w + random() * 8;
   }
-  const texture = new CanvasTexture(canvas);
-  texture.colorSpace = SRGBColorSpace;
+  texture.needsUpdate = true;
   const city = new Mesh(new PlaneGeometry(64, 16), new MeshBasicMaterial({ map: texture, transparent: true, opacity: 0.42, toneMapped: false, depthWrite: false }));
   city.position.set(0, 3.2, -26);
   return city;
@@ -485,14 +480,13 @@ export function buildStage(scene: Scene, s: Surfaces, robot: Object3D): Stage {
       });
     },
     async setGameShot(url, version) {
-      const image = new Image();
-      image.src = url;
-      await image.decode();
+      const image = await createImageBitmap(await (await fetch(url)).blob());
       const { ctx, texture } = canvasTexture(640, 468);
-      const scale = Math.max(640 / image.naturalWidth, 468 / image.naturalHeight);
-      const w = image.naturalWidth * scale;
-      const h = image.naturalHeight * scale;
+      const scale = Math.max(640 / image.width, 468 / image.height);
+      const w = image.width * scale;
+      const h = image.height * scale;
       ctx.drawImage(image, (640 - w) / 2, (468 - h) / 2, w, h);
+      image.close();
       ctx.fillStyle = 'rgba(0,0,0,0.16)';
       for (let y = 0; y < 468; y += 3) ctx.fillRect(0, y, 640, 1);
       const tag = `V${version}`;
