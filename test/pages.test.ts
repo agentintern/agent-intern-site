@@ -64,6 +64,38 @@ describe('every page, as a fetch sees it', () => {
     expect((await page('/status')).text).toContain('TEST MODE');
   });
 
+  it('tells the whole story in the HTML, with real numbers and no 3D needed', async () => {
+    const { text } = await page('/');
+    for (const id of ['clock-in', 'the-job', 'the-game', 'the-record']) expect(text).toContain(`id="${id}"`);
+    for (const label of ['CLOCK IN', 'THE JOB', 'THE GAME', 'THE RECORD']) expect(text).toContain(`>${label}<`);
+    expect(text).toContain('aria-hidden="true" data-state="asleep"');
+    expect(text).toContain('src="/img/robot-poster.webp"');
+    expect(text).toContain('Screenshot of v');
+    expect(text).toContain('Real intern shifts: 0.');
+    for (const step of ['Suggest', 'Screen', 'Vote', 'Shift', 'Gate']) expect(text).toContain(`<b>${step}</b>`);
+    expect(text).toContain('>example<');
+    expect(text).toContain('href="/practice"');
+    expect(text).toMatch(/data-count="\d+"/);
+  });
+
+  it('counts the drawers from real shifts', async () => {
+    const before = (await page('/')).text.match(/data-shipped="(\d+)"/)?.[1];
+    expect(before).toBeDefined();
+    const { text } = await page('/');
+    expect(text).toContain(`data-shipped="${before}"`);
+    expect(text).toMatch(/data-last="[^"]+"/);
+  });
+
+  it('puts the robot on the live page and a still on the 404', async () => {
+    expect((await page('/live')).text).toContain('id="stage-art"');
+    expect((await page('/nope')).text).toContain('src="/img/robot-shrug.webp"');
+    for (const path of ['/history', '/proof', '/board']) expect((await page(path)).text).not.toContain('id="stage-art"');
+  });
+
+  it('uses the 3D render as the default share card', async () => {
+    expect((await page('/about')).text).toContain('/img/share-card.jpg');
+  });
+
   it('states the limit of the gate claim on the proof page', async () => {
     const { text } = await page('/proof');
     expect(text).toContain('<b>Limit.</b>');

@@ -161,6 +161,144 @@ async function pageChecks(browser) {
   await context.close();
 }
 
+const MOODS = ['asleep', 'working', 'thinking', 'stuck', 'panicking', 'celebrating', 'refusing'];
+
+// Serves the home page with a state of the test's choosing, in the only place the page gets one: the server's HTML.
+async function mockState(context, first) {
+  let state = first;
+  await context.route(`${SITE}/`, async (route) => {
+    const response = await route.fetch();
+    const body = (await response.text()).replaceAll(/data-state="[a-z]+"/g, `data-state="${state}"`);
+    await route.fulfill({ response, body });
+  });
+  return (next) => { state = next; };
+}
+
+const moodOf = (page) => page.evaluate(() => document.getElementById('stage-art')?.dataset.mood);
+
+// What the page says, from the HTML: every link, heading and count.
+function factsIn(html) {
+  const main = html.slice(html.indexOf('<main'), html.indexOf('</main>'));
+  const list = (pattern) => [...main.matchAll(pattern)].map((m) => m[1].replace(/<[^>]+>/g, '').trim()).sort();
+  return JSON.stringify({ links: list(/href="([^"]+)"/g), headings: list(/<h[12][^>]*>(.*?)<\/h[12]>/gs), counts: list(/data-count="(\d+)"/g) });
+}
+
+async function officeChecks(browser) {
+  console.log('\n-- the office in 3D --');
+  const problems = [];
+  const open = async (options = {}, script) => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, ...options });
+    if (script) await context.addInitScript(script);
+    const page = await context.newPage();
+    page.on('console', (m) => { if (m.type() === 'error') problems.push(`${page.url()}: ${m.text().slice(0, 160)}`); });
+    page.on('pageerror', (e) => problems.push(`${page.url()}: ${String(e).slice(0, 160)}`));
+    return { context, page };
+  };
+  const live = (page) => page.waitForSelector('#stage-art.live', { state: 'attached', timeout: 45000 }).then(() => true).catch(() => false);
+
+  // With the 3D running, each state in the HTML becomes the robot's mood.
+  for (const mood of MOODS) {
+    const { context, page } = await open();
+    await mockState(context, mood);
+    await page.goto(`${SITE}/`);
+    const running = await live(page);
+    check(`the 3D runs for ${mood}`, running);
+    check(`state ${mood} sets that mood`, (await moodOf(page)) === mood, await moodOf(page));
+    await page.waitForTimeout(400);
+    // Playwright's screenshot injects a style tag, and WebKit logs the strict CSP refusing it. That's not the page's doing.
+    const before = problems.length;
+    check(`state ${mood} draws a picture`, (await page.locator('#stage-art').screenshot()).length > 20000);
+    problems.length = before;
+    await context.close();
+  }
+
+  // Nothing but a state from the server changes the mood.
+  {
+    const { context, page } = await open();
+    const setState = await mockState(context, 'asleep');
+    await page.goto(`${SITE}/`);
+    await live(page);
+    await page.mouse.move(640, 220);
+    await page.waitForTimeout(500);
+    await page.mouse.click(640, 300);
+    await page.mouse.click(640, 200);
+    await page.mouse.wheel(0, 900);
+    await page.waitForTimeout(300);
+    await page.mouse.wheel(0, -900);
+    await page.keyboard.press('PageDown');
+    await page.waitForTimeout(300);
+    check('the pointer, clicks and scrolling leave the mood alone', (await moodOf(page)) === 'asleep', await moodOf(page));
+    setState('stuck');
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await page.waitForFunction(() => document.getElementById('stage-art').dataset.mood === 'stuck', null, { timeout: 10000 }).catch(() => undefined);
+    check('a new state from the server changes the mood', (await moodOf(page)) === 'stuck', await moodOf(page));
+    await context.close();
+  }
+
+  // Native scrolling: the rail is real links, and the page still ends at the footer.
+  {
+    const { context, page } = await open();
+    await page.goto(`${SITE}/`);
+    await live(page);
+    for (const [id, label] of [['the-job', 'THE JOB'], ['the-game', 'THE GAME'], ['the-record', 'THE RECORD']]) {
+      await page.click(`.rail a[href="#${id}"]`);
+      await page.waitForTimeout(500);
+      const current = await page.evaluate(() => document.querySelector('.rail a[aria-current]')?.textContent);
+      check(`the rail goes to ${label}`, current === label && page.url().endsWith(`#${id}`), current);
+    }
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(300);
+    check('the footer is reachable', await page.locator('footer.foot').isVisible());
+    for (const width of [375, 768, 1440]) {
+      await page.setViewportSize({ width, height: 800 });
+      await page.waitForTimeout(250);
+      const wide = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      check(`the running story has no sideways scroll at ${width} px`, wide <= 0, `${wide}px over`);
+    }
+    await context.close();
+  }
+
+  // When it doesn't run, the poster stays and the page is the same page.
+  const javaScriptOn = await open();
+  await javaScriptOn.page.goto(`${SITE}/`);
+  await javaScriptOn.page.waitForTimeout(1500);
+  const withJs = factsIn(await javaScriptOn.page.content());
+  await javaScriptOn.context.close();
+
+  const noWebGl = "const get = HTMLCanvasElement.prototype.getContext; HTMLCanvasElement.prototype.getContext = function (type, ...rest) { return /webgl/.test(type) ? null : get.call(this, type, ...rest); };";
+  for (const [name, options, script] of [['no WebGL', {}, noWebGl], ['reduced motion', { reducedMotion: 'reduce' }]]) {
+    const { context, page } = await open(options, script);
+    await page.goto(`${SITE}/`);
+    await page.waitForTimeout(2000);
+    check(`${name}: no 3D starts`, (await page.locator('#stage-art canvas').count()) === 0);
+    check(`${name}: the poster stays`, await page.locator('.stage-poster').evaluate((img) => img.complete && img.naturalWidth > 0));
+    check(`${name}: the facts and links match`, factsIn(await page.content()) === withJs);
+    await context.close();
+  }
+  {
+    const { context, page } = await open({ javaScriptEnabled: false });
+    await page.goto(`${SITE}/`);
+    const html = await page.content();
+    check('JS off: the headline and state are in the page', html.includes('We hired an AI intern') && html.includes('id="hero-chip"'));
+    check('JS off: the facts and links match', factsIn(html) === withJs, factsIn(html) === withJs ? '' : `${factsIn(html).length} vs ${withJs.length}`);
+    check('JS off: the example task is there', html.includes('Add a sleepy cat that blocks the hallway'));
+    await context.close();
+  }
+
+  // The stills are real files.
+  {
+    const { context, page } = await open();
+    await page.goto(`${SITE}/this-is-not-a-page`).catch(() => undefined);
+    check('the 404 shows the robot shrugging', await page.locator('.shrug').evaluate((img) => img.complete && img.naturalWidth > 0));
+    const card = await context.request.get(`${SITE}/img/share-card.jpg`);
+    check('the share card is a picture', card.ok() && (card.headers()['content-type'] ?? '').startsWith('image/'));
+    await context.close();
+  }
+
+  const real = problems.filter((p) => !/404/.test(p));
+  check('the office makes no console errors', real.length === 0, real[0]);
+}
+
 async function boardFlow(browser) {
   console.log('\n-- a holder, start to finish --');
   const context = await browser.newContext({ viewport: { width: 1200, height: 900 } });
@@ -385,6 +523,7 @@ try {
   const hostMap = process.env.CHECK_HOST_MAP;
   const browser = await chromium.launch(hostMap ? { args: [`--host-resolver-rules=${hostMap}`] } : {});
   await pageChecks(browser);
+  await officeChecks(await chromium.launch({ args: [process.platform === 'darwin' ? '--use-angle=metal' : '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] }));
   await boardFlow(browser);
   await realGameChecks(browser);
   await directVisit(browser, gameUrl);
@@ -405,6 +544,7 @@ try {
     engine = 'webkit: ';
     await directVisit(safari, gameUrl);
     await pageChecks(safari);
+    await officeChecks(safari);
     // WebKit drops Secure cookies on http://localhost, so signing in only works here over real HTTPS.
     if (remote) await boardFlow(safari);
     await realGameChecks(safari);
