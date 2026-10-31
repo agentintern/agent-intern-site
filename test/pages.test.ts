@@ -13,7 +13,7 @@ const gateAuth = 'gate-secret';
 
 const PAGES = ['/', '/play', '/board', '/practice', '/live', '/history', '/hr', '/break', '/promotions', '/how', '/about', '/status', '/changelog', '/proof', '/proof/sandbox', '/security', '/brand', '/api'];
 const BANNED = /\b(token|tokens|mint|solscan|contract address|buyback|airdrop)\b/i;
-const OVERCLAIMS = /fully autonomous|24\/7|runs by itself|\baudited\b|guaranteed|ai-powered security/i;
+const OVERCLAIMS = /\bautonomous\b|24\/7|runs by itself|\baudited\b|guaranteed|ai-powered security/i;
 
 async function page(path: string): Promise<{ status: number; text: string; headers: Headers }> {
   const res = await h.call(path);
@@ -162,7 +162,7 @@ describe('machines', () => {
     expect(manifest.shifts.realIntern).toBeTypeOf('number');
     expect((await page('/sitemap.xml')).text).toContain('<urlset');
     expect((await page('/feed.xml')).text).toContain('<rss');
-    expect((await page('/llms.txt')).text).toContain("isn't: a person starts every shift");
+    expect((await page('/llms.txt')).text).toContain('A person starts every shift and approves');
     expect((await page('/robots.txt')).text).toContain('Sitemap:');
     expect((await page('/.well-known/security.txt')).text).toContain('Contact:');
   });

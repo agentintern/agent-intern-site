@@ -20,13 +20,17 @@ const FORBIDDEN = [
   ['transaction signing', /signTransaction|signAllTransactions|signAndSendTransaction|sendTransaction|sendRawTransaction/],
 ];
 
-// A weekly supply chain scan. It reads the repo, and it has no secrets and no way to start a shift.
-const SCHEDULE_ALLOWED = new Set(['.github/workflows/scorecard.yml']);
-
 const WORKFLOW_FORBIDDEN = [
   ['a workflow schedule', /^\s*schedule\s*:/m],
-  ['a gate run on pull_request (it would use the branch copy of the workflow)', /^\s*pull_request\s*:/m],
+  ['a run on pull_request (it would use the branch copy of the workflow)', /^\s*pull_request\s*:/m],
 ];
+
+// The two exceptions, by exact path. Scorecard is a weekly scan with no way to start a shift. The site's CI holds no
+// secrets and deploys nothing, so a branch copy of it can do no harm.
+const ALLOWED = {
+  'a workflow schedule': new Set(['.github/workflows/scorecard.yml']),
+  'a run on pull_request (it would use the branch copy of the workflow)': new Set(['.github/workflows/ci.yml']),
+};
 
 // Only the proxy's allowlist may name Claude's API host. If the site ever did, it would be
 // sending visitors' requests to Claude.
@@ -65,9 +69,7 @@ export function scan(root) {
     if (/\.github\/workflows\//.test(path)) {
       for (const [label, pattern] of WORKFLOW_FORBIDDEN) {
         if (!pattern.test(text)) continue;
-        if (label === 'a workflow schedule' && SCHEDULE_ALLOWED.has(relativePath)) continue;
-        // The site's CI holds no secrets and deploys nothing, so a branch copy of it can do no harm.
-        if (label.startsWith('a gate run') && basename(path) !== 'gate.yml') continue;
+        if (ALLOWED[label]?.has(relativePath)) continue;
         findings.push(`${relativePath}: ${label}`);
       }
     }
