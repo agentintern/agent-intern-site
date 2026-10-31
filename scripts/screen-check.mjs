@@ -1,8 +1,8 @@
 import { webcrypto as crypto } from 'node:crypto';
 
 // Sends tasks through the live API as a stranger would: fresh wallet, real signature, real screening.
-// Usage: node scripts/screen-check.mjs https://agent-intern.pages.dev
-const SITE = process.argv[2] ?? 'https://agent-intern.pages.dev';
+// Usage: node scripts/screen-check.mjs https://agentintern.online
+const SITE = process.argv[2] ?? 'https://agentintern.online';
 const domain = new URL(SITE).host;
 
 const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';

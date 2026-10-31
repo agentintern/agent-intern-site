@@ -2,6 +2,12 @@ import { get, type Pause, type Shift, type State } from './api';
 import { byId, h, maybeId } from './dom';
 
 declare const __MINT__: string;
+declare const __SITE_ORIGIN__: string;
+
+// Signatures name one domain, so the old address has to send people to the real one.
+if (location.hostname.endsWith('.pages.dev')) {
+  location.replace(`${__SITE_ORIGIN__}${location.pathname}${location.search}`);
+}
 
 // Compiled in at build time. With the mint empty, this whole block and its words drop out of the
 // bundle, so test mode really does mention none of it.

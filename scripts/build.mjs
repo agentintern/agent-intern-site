@@ -54,6 +54,7 @@ await build({
   define: {
     __MINT__: JSON.stringify(token.mint),
     __TEST_MODE__: JSON.stringify(!tokenOn),
+    __SITE_ORIGIN__: JSON.stringify(siteOrigin),
   },
   logLevel: 'error',
 });

@@ -301,6 +301,49 @@ async function hostileChecks(browser, gameUrl) {
   await hostile.close();
 }
 
+// play.<domain> and <domain> are the same site to a browser, which pages.dev never was. The sandbox
+// has to keep the game out anyway, so this attacks the real site from inside the real frame.
+async function sameSiteChecks(browser, gameUrl) {
+  console.log('\n-- game and site on one domain --');
+  const context = await browser.newContext({ viewport: { width: 1200, height: 900 } });
+  const page = await context.newPage();
+  await page.goto(`${SITE}/board`);
+  await page.click('#test-wallet');
+  await page.waitForSelector('#pass-state');
+  const cookies = await context.cookies(SITE);
+  const session = cookies.find((c) => c.name === '__Host-pass');
+  check('the session cookie is host-only', session && !session.domain.startsWith('.'), session?.domain);
+  check('the session cookie is HttpOnly and Strict', session?.httpOnly && session?.sameSite === 'Strict');
+  const toGame = await context.cookies(gameUrl);
+  check('the browser would not send it to the game origin', !toGame.some((c) => c.name === '__Host-pass'));
+
+  await page.goto(`${SITE}/play`);
+  const frame = await (await page.waitForSelector('#game')).contentFrame();
+  await frame.waitForFunction(() => window.__intern?.frames > 5, null, { timeout: 15_000 });
+  check('the frame is on the same registrable domain', new URL(frame.url()).hostname.endsWith(new URL(SITE).hostname));
+  const report = await frame.evaluate(async (site) => {
+    const attempt = async (run) => { try { return String(await run()); } catch (e) { return `blocked: ${e.name}`; } };
+    return {
+      origin: self.origin,
+      me: await attempt(() => fetch(`${site}/api/me`, { credentials: 'include' }).then((r) => r.text())),
+      vote: await attempt(() => fetch(`${site}/api/votes`, { method: 'POST', credentials: 'include', body: '{}' }).then((r) => r.status)),
+      cookie: await attempt(() => document.cookie),
+      setCookie: await attempt(() => { document.cookie = '__Host-pass=stolen; Path=/; Secure'; return document.cookie; }),
+      domain: await attempt(() => { document.domain = new URL(site).hostname; return document.domain; }),
+      parent: await attempt(() => window.parent.document.title),
+    };
+  }, SITE);
+  check('the game has an opaque origin', report.origin === 'null', report.origin);
+  check('it cannot read the session through the API', /blocked/.test(report.me), report.me.slice(0, 40));
+  check('it cannot post a vote', /blocked/.test(report.vote), report.vote);
+  check('it cannot read cookies', /blocked/.test(report.cookie), report.cookie);
+  check('it cannot overwrite the session cookie', /blocked/.test(report.setCookie), report.setCookie);
+  check('it cannot reach into the site with document.domain', /blocked/.test(report.domain) && /blocked/.test(report.parent), report.domain);
+  const after = await context.cookies(SITE);
+  check('the session cookie is unchanged', after.find((c) => c.name === '__Host-pass')?.value === session?.value);
+  await context.close();
+}
+
 async function directVisit(browser, gameUrl) {
   const context = await browser.newContext();
   const page = await context.newPage();
@@ -317,12 +360,13 @@ async function directVisit(browser, gameUrl) {
 try {
   await startCanary();
   if (!remote) await startLocal();
-  const gameUrl = remote ? 'https://agent-intern-play.pages.dev' : LOCAL_GAME;
+  const gameUrl = remote ? new URL(remote).origin.replace('://', '://play.') : LOCAL_GAME;
   const browser = await chromium.launch();
   await pageChecks(browser);
   await boardFlow(browser);
   await realGameChecks(browser);
   await directVisit(browser, gameUrl);
+  if (remote) await sameSiteChecks(browser, gameUrl);
   if (!remote) await hostileChecks(browser, await hostileGame());
   await browser.close();
 

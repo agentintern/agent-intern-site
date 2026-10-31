@@ -6,8 +6,8 @@ import { buildMessage, type SignedAction } from '../src/shared/message';
 import type { Env } from '../src/worker/env';
 import { handle } from '../src/worker/index';
 
-export const ORIGIN = 'https://agent-intern.pages.dev';
-export const DOMAIN = 'agent-intern.pages.dev';
+export const ORIGIN = 'https://agentintern.online';
+export const DOMAIN = 'agentintern.online';
 
 export interface Wallet {
   address: string;

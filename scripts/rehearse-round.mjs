@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 
 // A real round on the live system for a rehearsal: real signatures, screening, votes and a real
 // close. Only the close time is moved, so the winner reaches the queue now instead of at 18:00.
-const SITE = 'https://agent-intern.pages.dev';
+const SITE = 'https://agentintern.online';
 const domain = new URL(SITE).host;
 const text = process.argv[2];
 

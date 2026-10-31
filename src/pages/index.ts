@@ -48,6 +48,7 @@ export function layout(page: Page, options: Options): string {
 <title>${page.title}</title>
 <meta name="description" content="${page.description}">
 <meta name="theme-color" content="#1c1a26">
+<link rel="canonical" href="${url}">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/site.css">
 <meta property="og:type" content="website">

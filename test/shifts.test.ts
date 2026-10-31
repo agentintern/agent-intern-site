@@ -207,7 +207,7 @@ describe('the gate', () => {
     const post = async (bytes: Uint8Array<ArrayBuffer>, bearer: string): Promise<number> => {
       const { handle } = await import('../src/worker/index');
       const res = await handle(
-        new Request(`https://agent-intern.pages.dev${url}`, { method: 'POST', headers: { authorization: `Bearer ${bearer}` }, body: bytes }),
+        new Request(`https://agentintern.online${url}`, { method: 'POST', headers: { authorization: `Bearer ${bearer}` }, body: bytes }),
         h.env, { waitUntil: () => {} },
       );
       return res.status;
@@ -230,7 +230,7 @@ describe('the ship card', () => {
     await h.call('/api/shift/finish', { bearer: shiftAuth, body: { shiftId: shift.id, status: 'done' } });
     await gate({ shiftId: shift.id, stage: 'verify', status: 'pass', final: true, version: '0.1.3' });
     const { handle } = await import('../src/worker/index');
-    const res = await handle(new Request(`https://agent-intern.pages.dev/api/shifts/${shift.id}/card.png`), h.env, { waitUntil: () => {} });
+    const res = await handle(new Request(`https://agentintern.online/api/shifts/${shift.id}/card.png`), h.env, { waitUntil: () => {} });
     expect(res.headers.get('content-type')).toBe('image/png');
     const bytes = new Uint8Array(await res.arrayBuffer());
     expect([...bytes.slice(0, 4)]).toEqual([0x89, 0x50, 0x4e, 0x47]);

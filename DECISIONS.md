@@ -17,6 +17,14 @@ opaque origin with no cookies or storage.
 **`Cross-Origin-Resource-Policy: cross-origin` on the game.** `same-origin` would block `game.js`
 inside the sandbox, since an opaque origin isn't the same origin as anything.
 
+**The game and the site now share a domain, and the isolation doesn't rely on that being different.**
+On `pages.dev` they were separate sites to a browser. `play.agentintern.online` and
+`agentintern.online` are one site, so `SameSite=Strict` alone wouldn't keep the session cookie from the
+game. What does: the sandbox gives the game an opaque origin, which is never same-site; `connect-src
+'none'` stops its requests; `__Host-` makes the cookie host-only and impossible to overwrite from a
+subdomain; and writes need an exact `Origin`. `scripts/browser-check.mjs` attacks the live site from
+inside the live frame to prove it.
+
 ## Screening
 
 **The agent check uses Workers AI, not Claude.** The rules rule out sending visitors' text to Claude
