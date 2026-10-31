@@ -181,3 +181,17 @@ export async function shipCard(shift: ShiftRow): Promise<Uint8Array<ArrayBuffer>
   drawIntern(bitmap, 960, 360, 18);
   return encodePng(bitmap);
 }
+
+export async function homeCard(): Promise<Uint8Array<ArrayBuffer>> {
+  const bitmap = new Bitmap();
+  bitmap.rect(0, 0, WIDTH, HEIGHT, 'paper');
+  for (let y = 110; y < HEIGHT; y += 52) bitmap.rect(0, y, WIDTH, 2, 'rule');
+  bitmap.rect(84, 0, 3, HEIGHT, 'red');
+  bitmap.text('WE HIRED AN', 120, 100, 11, 'ink');
+  bitmap.text('AI INTERN.', 120, 200, 11, 'ink');
+  bitmap.text('HOLDERS ARE', 120, 320, 11, 'red');
+  bitmap.text('ITS BOSS.', 120, 420, 11, 'red');
+  bitmap.text('HOLDERS VOTE, THE INTERN SHIPS IT', 120, 546, 5, 'dim');
+  drawIntern(bitmap, 930, 200, 20);
+  return encodePng(bitmap);
+}

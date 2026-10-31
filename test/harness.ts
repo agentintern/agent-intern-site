@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { Miniflare } from 'miniflare';
 import { base58Encode } from '../src/shared/base58';
 import { buildMessage, type SignedAction } from '../src/shared/message';
@@ -50,7 +51,7 @@ interface CallInit {
 export async function createHarness(): Promise<Harness> {
   const mf = new Miniflare({ modules: true, script: 'export default { fetch() { return new Response("") } }', d1Databases: ['DB'] });
   const db = (await mf.getD1Database('DB')) as unknown as D1Database;
-  const schema = readFileSync(new URL('../migrations/0001_init.sql', import.meta.url), 'utf8');
+  const schema = readFileSync(fileURLToPath(new URL('../migrations/0001_init.sql', import.meta.url).href), 'utf8');
   for (const statement of schema.replace(/--.*$/gm, '').split(/;\s*$/m)) {
     if (statement.trim()) await db.prepare(statement).run();
   }

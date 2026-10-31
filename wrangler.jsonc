@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "agent-intern",
+  "pages_build_output_dir": "dist",
+  "compatibility_date": "2026-10-20",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "agent-intern",
+      "database_id": "9d269e08-28eb-4b78-bc72-0e86038066cc",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "ai": { "binding": "AI" }
+}

@@ -2,7 +2,7 @@ import { CLEAR_COOKIE, createSession, dropSession, sessionWallet, verifySigned, 
 import { meetsThreshold, readBalance } from './balance';
 import { testMode, threshold } from './config';
 import { propose, publicVotes, requestNonce, setTestBalance, vote } from './board';
-import { shipCard } from './card';
+import { homeCard, shipCard } from './card';
 import type { Ctx, Env } from './env';
 import { HttpError, json, readJson, requireBearer, requireSameOrigin } from './http';
 import { advance } from './rounds';
@@ -42,6 +42,9 @@ async function route(request: Request, env: Env, ctx: Ctx, url: URL): Promise<Re
       const png = await shipCard(shift);
       const open = shift.status === 'live' || shift.status === 'gate';
       return new Response(png, { headers: { 'content-type': 'image/png', 'cache-control': `public, max-age=${open ? 30 : 3600}`, 'x-content-type-options': 'nosniff' } });
+    }
+    if (pathname === '/api/card.png') {
+      return new Response(await homeCard(), { headers: { 'content-type': 'image/png', 'cache-control': 'public, max-age=86400', 'x-content-type-options': 'nosniff' } });
     }
     if ((match = pathname.match(/^\/api\/votes\/(\d+)$/))) {
       return json(await publicVotes(env, Number(match[1])), { maxAge: 5 });
