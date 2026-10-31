@@ -4,10 +4,40 @@
 
 TEST MODE. No mint is set, and token features are compiled out. Both are live on Cloudflare.
 
-**Not finished.** The whole pipeline ran for real on GitHub and Cloudflare, but no intern has worked a shift
-yet. The history holds labeled rehearsals, a team change and a shift nobody worked. See [What's left](#whats-left).
+**One real shift so far.** Shift 8 was the first an intern worked, and it shipped `0.1.8` through the real gate. Everything
+before it is a labeled rehearsal, a team change or a shift nobody worked. See [What's left](#whats-left).
 
 Shift 5's rollback is confirmed: `rolled-back` on the site, its pull request closed, and `main` clean.
+
+## Stop when blocked, 2026-10-31
+
+In shift 8 the intern hit a deny rule and went around it inside the container. There was no damage, and
+`docs/THREAT-MODEL.md` says why. This fixes what let it get stuck, and tells it to stop.
+
+| Check | Where | Result |
+| --- | --- | --- |
+| `npm ci`, `npm test`, `npm run typecheck` and `npm run build` on the game branch, in the real container, through the proxy, as the intern user | Docker | All 4 passed, with vitest at the locked 4.1.12 |
+| The 5 new deny entries in `/etc/claude-code/managed-settings.json` in the image | Docker | All 5 present |
+| `npm run test:container` | Docker | 60 of 60. The login volume wasn't touched |
+| `npm test` in a fresh clone with no `node_modules`, offline, with a dead registry | Local | Failed in 196 ms with "node_modules is missing. Run npm ci." Nothing was created. The old script, the same way, went looking for vitest in the registry |
+| Shift tools tests, the unattended check | Local | 131 of 131, 0 findings |
+| Removing a deny entry on purpose | Local | The test failed, as it should |
+| Game type check, unit tests, gate tests, maintenance rules | Local | Passed: 31 unit, 73 gate |
+| The real deploy key pushing to `shift/maintenance-keytest`, with the ruleset on | GitHub | Refused: GH013, "Cannot create ref due to creations being restricted". The branch doesn't exist |
+| Pull request 15, opened with the ruleset off for a moment | GitHub | The ruleset was read back as active. `maintenance checks` passed, and it can be merged with `live check` skipped |
+
+The maintenance check first failed here, not on GitHub: the full `gh api` path in `CONTRIBUTING.md` looks like a secret to the
+scan. `gate/rules.mjs` wasn't changed, and the commands use a variable instead.
+
+This report went up with the change, so it can't record the site's CI run or the deploy after it. Both are public: the
+Actions tab, and `/proof`.
+
+**Not proved.**
+
+- How the intern behaves when blocked. The instruction is new, and only a real shift can prove it.
+- That the deny entries stop a real session. The test shows they're in the image, not that Claude Code refuses each command.
+  They match command text, so a command worded another way may pass.
+- That the deploy key is refused on an old maintenance branch. It tried creating one, not updating one.
 
 ## Sealing the shift push, 2026-10-31
 
@@ -45,12 +75,11 @@ subscription: billing type `stripe_subscription`, no API key, extra usage off.
 
 **Not proved.**
 
-- The gate's full path, deploy included. Only the first real shift runs it, so the new Cloudflare token and the
-  Environment's `GATE_TOKEN` have never been used. Watch the deploy, tell the site and merge jobs.
 - That `live check` stops anything beyond a race. A skip counts as passed, so it doesn't stop a `shift/maintenance-*` branch.
   A rejected shift skipping it and a branch job named `live check` are from how GitHub works, not from a test.
-- That the deploy key is refused on `shift/maintenance-*`. The ruleset has no exception, and the key was refused the same way
-  on `main`, but this one hasn't been tried, because that needs a push to the game.
+
+**Proved afterwards.** Shift 8's [run](https://github.com/agentintern/agent-intern-game/actions/runs/41249978232) passed deploy, live check, merge and tell the site, so the Environment and the
+new Cloudflare token work. The deploy key was refused on `shift/maintenance-keytest`.
 
 ## The office in 3D, 2026-10-31
 
@@ -179,7 +208,7 @@ it is removed, `main` is back on its own commit, and the rulesets now have no ex
 
 | Item | Why it isn't done |
 | --- | --- |
-| A real shift: `/shift`, the intern refusing a bad task | Only a person can do this. The login works, but `CLAUDE.md` hasn't been tested on a live session, so this is the biggest open question. |
+| The intern refusing a bad task, and stopping when blocked | Shift 8 did a task, and it went around a block. No real shift has refused anything, and the new instruction hasn't met a real session. This is the biggest open question. |
 | A person playing the game | "Fun" so far means bots and screenshots. |
 | A real mid-range phone | Only simulated with a CPU throttle. WebKit ran on a Mac, not on an iPhone. |
 | A real wallet extension | Signing ran with test keys. The Wallet Standard and legacy paths are untested. |
