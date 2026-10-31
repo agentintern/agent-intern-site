@@ -194,11 +194,11 @@ export function shipCardPost(shift: ShiftRow, origin: string): string {
     shipped: `shift ${shift.id} shipped v${shift.version ?? ''}: "${task}"`,
     refused: `shift ${shift.id}: refused "${task}"`,
     failed: `shift ${shift.id} failed: "${task}"`,
-    'rolled-back': `shift ${shift.id} shipped "${task}", broke on the live site, and rolled back by itself.`,
+    'rolled-back': `shift ${shift.id} shipped "${task}", broke on the live site, and rolled back.`,
   };
   const who: Record<string, string> = {
     rehearsal: 'rehearsal: a person ran this to test the pipeline. the intern did not run.',
-    team: 'team change, made by the people running the project.',
+    team: 'team change, made by the people running the project with Claude Code. not intern work.',
     none: 'nobody worked this shift.',
   };
   const line = lead[shift.status] ?? `shift ${shift.id} is on: "${task}"`;

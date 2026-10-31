@@ -40,7 +40,7 @@ export interface ShiftRow {
 export const WORK_LABELS: Record<string, { label: string; meaning: string }> = {
   intern: { label: 'INTERN', meaning: 'The intern did this work in a shift a person started.' },
   rehearsal: { label: 'REHEARSAL', meaning: 'A person ran this to test the pipeline. No model did the work.' },
-  team: { label: 'TEAM CHANGE', meaning: 'The people running the project made this change. It went through the same gate.' },
+  team: { label: 'TEAM CHANGE', meaning: 'The people running the project made this change, with Claude Code doing much of the writing. It went through the same gate, and it never counts as intern work.' },
   none: { label: 'NOT WORKED', meaning: 'The shift opened, but nobody did any work in it.' },
 };
 

@@ -6,7 +6,7 @@ const RULES = [
   ['innerHTML in the client', /\.innerHTML|outerHTML|insertAdjacentHTML|document\.write/, (p) => p.startsWith('src/client')],
   ['an inline style attribute', /\sstyle="/, (p) => p.startsWith('src/worker/html')],
   ['an inline script', /<script>(?!<)/, (p) => p.startsWith('src/worker/html')],
-  ['a claim the project does not make', /fully autonomous|24\/7|runs by itself|\baudited\b|guaranteed|ai-powered security/i, (p) => p.startsWith('src/worker/html')],
+  ['a claim the project does not make', /\bautonomous\b|24\/7|runs by itself|\baudited\b|guaranteed|ai-powered security/i, (p) => p.startsWith('src/worker/html')],
   ['a transaction call', /signTransaction|signAllTransactions|signAndSendTransaction|sendTransaction/, (p) => p.startsWith('src/')],
   ['a console.log in the client', /console\.log/, (p) => p.startsWith('src/client')],
   ['a TODO left behind', /\b(TODO|FIXME|XXX)\b/, (p) => p.startsWith('src/') || p.startsWith('scripts/')],

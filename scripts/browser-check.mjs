@@ -23,7 +23,7 @@ const check = (label, ok, detail = '') => {
 
 const PAGES = ['/', '/play', '/board', '/practice', '/live', '/history', '/hr', '/break', '/promotions', '/how', '/proof', '/proof/sandbox', '/about', '/status', '/changelog', '/security', '/brand', '/api'];
 const BANNED_WORDS = /\b(token|tokens|mint|solscan|contract address|buyback|buybacks|airdrop)\b/i;
-const BANNED_CLAIMS = /fully autonomous|24\/7|runs by itself|\baudited\b|guaranteed|ai-powered security/i;
+const BANNED_CLAIMS = /\bautonomous\b|24\/7|runs by itself|\baudited\b|guaranteed|ai-powered security/i;
 
 // Anything that reaches this server left the sandbox. It's how "blocked" gets proved, not assumed.
 const canary = { hits: [], server: null, url: '' };

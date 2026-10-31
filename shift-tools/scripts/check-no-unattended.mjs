@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, dirname, extname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -19,6 +19,9 @@ const FORBIDDEN = [
   ['a Worker cron', /"crons"\s*:|\[triggers\]|scheduled\s*\(/],
   ['transaction signing', /signTransaction|signAllTransactions|signAndSendTransaction|sendTransaction|sendRawTransaction/],
 ];
+
+// A weekly supply chain scan. It reads the repo, and it has no secrets and no way to start a shift.
+const SCHEDULE_ALLOWED = new Set(['.github/workflows/scorecard.yml']);
 
 const WORKFLOW_FORBIDDEN = [
   ['a workflow schedule', /^\s*schedule\s*:/m],
@@ -61,7 +64,7 @@ export function scan(root) {
     }
     if (/\.github\/workflows\//.test(path)) {
       for (const [label, pattern] of WORKFLOW_FORBIDDEN) {
-        if (pattern.test(text)) findings.push(`${relativePath}: ${label}`);
+        if (pattern.test(text) && !(label === 'a workflow schedule' && SCHEDULE_ALLOWED.has(relativePath))) findings.push(`${relativePath}: ${label}`);
       }
     }
     if (API_HOST.test(text) && !API_HOST_ALLOWED.has(relativePath) && !basename(path).endsWith('.test.mjs')) {
@@ -72,9 +75,9 @@ export function scan(root) {
 }
 
 if (process.argv[1] === SELF) {
-  const roots = process.argv.length > 2
-    ? process.argv.slice(2)
-    : ['agent-intern-game', 'agent-intern-site', 'agent-intern-shift'].map((name) => join(workspaceRoot, name));
+  const workspace = ['agent-intern-game', 'agent-intern-site', 'agent-intern-shift'].map((name) => join(workspaceRoot, name)).filter(existsSync);
+  // The public copy lives inside a clone of the site, with no other repo next to it.
+  const roots = process.argv.length > 2 ? process.argv.slice(2) : workspace.length ? workspace : [workspaceRoot, resolve(here, '..')];
   let failed = false;
   for (const root of roots) {
     const { findings, count } = scan(root);

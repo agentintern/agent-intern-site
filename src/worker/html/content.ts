@@ -103,8 +103,8 @@ export async function aboutPage(env: Env): Promise<Rendered> {
 <p><b>The game is kept apart.</b> It's the only code the intern can write, and it lives on its own address. It runs in a sealed frame, with no way to reach your wallet or the voting site. ${proofLink('sandbox', 'Evidence')}.</p>
 <p><b>Voting is only a signature.</b> You sign a plain message to prove you hold. It's not a transaction. ${proofLink('votes', 'Evidence')}.</p>
 <p><b>A person is at the keyboard.</b> This is the part we want to be clearest about.</p>
-<h2>Why we don't call it autonomous</h2>
-<p>The word gets used a lot. We're not using it, because it wouldn't be true.</p>
+<h2>Why a person stays at the keyboard</h2>
+<p>An agent that runs unattended makes a better headline. This one doesn't, because it takes requests from strangers.</p>
 <p>The intern doesn't run on a schedule. A person opens Claude Code in a sealed container, stays at the keyboard, and approves what the intern asks to do. If nobody opens a shift, the task waits in the queue.</p>
 <p>We think that's the honest way to run an agent that takes requests from the public. Holders set the work, the intern does the work, and a person keeps the door.</p>
 <h2>What a pass gives you</h2>
@@ -142,22 +142,22 @@ export function claims(origin: string, gameOrigin: string): Claim[] {
     },
     {
       id: 'gate', claim: 'Nothing ships without the gate, and a shift cannot edit the gate.',
-      evidence: html`<a href="${GAME}/blob/main/.github/workflows/gate.yml">The workflow</a>, <a href="${GAME}/blob/main/gate/rules.mjs">its rules</a>. Real runs: <a href="${RUNS.attack}">an attack rejected</a> (<a href="/shift/3">shift 3</a>), <a href="${RUNS.clean}">a clean change shipped</a> (<a href="/shift/4">shift 4</a>).`,
+      evidence: html`<a href="${GAME}/blob/main/.github/workflows/gate.yml">The workflow</a>, <a href="${GAME}/blob/main/gate/rules.mjs">its rules</a>. Real runs: <a href="${RUNS.attack}">an attack rejected</a> (<a href="/shift/3">shift 3</a>), <a href="${RUNS.clean}">a clean change shipped</a> (<a href="/shift/4">shift 4</a>). Shift 3's page says the rules job didn't finish because of a reporting bug fixed after it. The run shows the real reasons.`,
       command: `curl -s ${origin}/api/shifts/3 | jq '.gate'`,
     },
     {
-      id: 'rollback', claim: 'A broken deploy rolls back by itself.',
+      id: 'rollback', claim: 'A broken deploy rolls back.',
       evidence: html`<a href="/shift/5">Shift 5</a>, a labeled rehearsal: code that only broke on the live address. <a href="${RUNS.rollback}">The run</a>. It passed CI, failed the live check, and the workflow restored the last good version.`,
       command: `curl -s ${origin}/api/shifts/5 | jq '.shift.status, .gate[-2:]'`,
     },
     {
       id: 'votes', claim: 'Every vote is a signature anyone can check.',
-      evidence: html`<a href="/api/votes">The public record</a> and the <a href="/board#verify-title">verify box</a>, which runs in your browser. <a href="${SITE_REPO}/blob/main/src/shared/verify.ts">The check is 8 lines</a>.`,
+      evidence: html`<a href="/api/votes">The public record</a> and the <a href="/board#verify-title">verify box</a>, which runs in your browser. <a href="${SITE_REPO}/blob/main/src/shared/verify.ts">The check is one short file</a>.`,
       command: `curl -s ${origin}/api/votes/1 | jq '.votes[0] | {wallet, signature, message}'`,
     },
     {
       id: 'person', claim: 'A person starts every shift.',
-      evidence: html`<a href="${SITE_REPO}/blob/main/shift-tools/lib/prompt.mjs">The terminal check</a>, and <a href="${SITE_REPO}/blob/main/shift-tools/scripts/check-no-unattended.mjs">a scan</a> that fails on any scheduler, API key path or unattended Claude Code call. Limit: the terminal check stops cron, CI and pipes, and a pseudo-terminal could pass it. What keeps a person in the loop is that a session needs a person's login and approvals.`,
+      evidence: html`<a href="${SITE_REPO}/blob/main/shift-tools/lib/prompt.mjs">The terminal check</a>, and <a href="${SITE_REPO}/blob/main/shift-tools/scripts/check-no-unattended.mjs">a scan</a> that fails on any scheduler, API key path or unattended Claude Code call. The one scheduled job is a weekly <a href="${SITE_REPO}/blob/main/.github/workflows/scorecard.yml">supply chain scan</a> that can't start a shift. Limit: the terminal check stops cron, CI and pipes, and a pseudo-terminal could pass it. What keeps a person in the loop is that a session needs a person's login and approvals.`,
       command: `git clone ${SITE_REPO}.git && cd agent-intern-site/shift-tools && npm run check:no-unattended`,
     },
     {
@@ -191,7 +191,7 @@ export async function proofPage(env: Env, origin: string): Promise<Rendered> {
     description: 'Every public claim, with its evidence and a command you can run yourself.',
     state: shiftLine(o),
     body: html`
-${title('Proof', "Every public claim, with its evidence and a command you can run in a minute. If a claim can't be proved, it comes off the site.")}
+${title('Proof', "Every public claim, with its evidence and a command you can run. If a claim can't be proved, it comes off the site.")}
 <p class="callout">Biggest open item: no real intern shift has run yet. <a href="/status">The status page</a> lists what's still unproved.</p>
 <ol class="proof">${claims(origin, SITE.gameOrigin).map((c) => html`<li class="paper" id="${c.id}"><h2>${c.claim}</h2><p>${c.evidence}</p><pre><code>${c.command}</code></pre><button class="btn ghost small" type="button" data-copy="${c.command}">Copy command</button></li>`)}</ol>`,
   };
@@ -280,6 +280,7 @@ export const PUBLIC_ENDPOINTS: Endpoint[] = [
   { path: '/api/changelog', about: 'What reached the live game.' },
   { path: '/api/leaderboard', about: 'All-time scores. Add ?day={n} for a Daily Shift.' },
   { path: '/api/hr', about: 'The HR Log.' },
+  { path: '/api/hall', about: 'The Hall of Bosses: who proposed each task the intern shipped.' },
   { path: '/api/bosses/{wallet}', about: 'A boss profile.' },
   { path: '/api/promotion', about: "The intern's title and real shipped count." },
   { path: '/.well-known/agent-intern.json', about: 'A machine-readable manifest of claims and links.' },
