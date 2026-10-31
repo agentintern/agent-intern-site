@@ -57,7 +57,7 @@ async function signIn(next: Signer): Promise<void> {
   signer = next;
   try {
     me = { ...(await post<Me>('/api/auth/sign-in', await signedBody({ action: 'sign-in' }))), vote: null };
-    await refresh();
+    await refreshNow();
   } catch (cause) {
     signer = null;
     renderPass(errorText(cause));
@@ -68,7 +68,7 @@ async function signOut(): Promise<void> {
   await post('/api/auth/sign-out', {});
   signer = null;
   me = { wallet: null };
-  await refresh();
+  await refreshNow();
 }
 
 function connectOptions(): HTMLElement {
@@ -99,7 +99,7 @@ function testBalanceControl(): HTMLElement | null {
   const input = h('input', { id: 'test-balance', type: 'number', min: '0', step: '1', value: me.balance ?? '0' });
   const save = h('button', { class: 'btn small ghost', type: 'button', id: 'test-balance-save' }, 'Set fake balance');
   save.addEventListener('click', () => {
-    post('/api/test/balance', { balance: Number(input.value) }).then(refresh).catch((cause: unknown) => renderPass(errorText(cause)));
+    post('/api/test/balance', { balance: Number(input.value) }).then(refreshNow).catch((cause: unknown) => renderPass(errorText(cause)));
   });
   return h('div', { class: 'field', 'data-mt': '12' }, h('label', { for: 'test-balance' }, 'TEST MODE: pretend balance'), input, save);
 }
@@ -142,7 +142,7 @@ function voteButton(proposal: Proposal): HTMLElement {
     button.disabled = true;
     signedBody({ action: 'vote', round, proposal: proposal.id })
       .then((body) => post('/api/votes', { ...body, round, proposal: proposal.id }))
-      .then(refresh)
+      .then(refreshNow)
       .catch((cause: unknown) => {
         renderPass(errorText(cause));
         button.disabled = false;
@@ -186,9 +186,9 @@ function renderBoard(data: Board): void {
   byId<HTMLButtonElement>('propose-button').disabled = !canAct();
 }
 
-async function renderRecord(round: number): Promise<void> {
+async function renderRecord(round: number, fresh: boolean): Promise<void> {
   byId<HTMLAnchorElement>('record-link').href = `/api/votes/${round}`;
-  const { votes } = await get<{ votes: VoteRecord[] }>(`/api/votes/${round}`);
+  const { votes } = await get<{ votes: VoteRecord[] }>(`/api/votes/${round}`, fresh);
   const body = byId('record');
   if (votes.length === 0) {
     fill(body, h('tr', {}, h('td', { colspan: '5', class: 'empty' }, 'No votes yet.')));
@@ -215,15 +215,17 @@ async function renderRecord(round: number): Promise<void> {
   }));
 }
 
-async function refresh(): Promise<void> {
-  const [data, session] = await Promise.all([get<Board>('/api/board'), get<Me>('/api/me')]);
+async function refresh(fresh = false): Promise<void> {
+  const [data, session] = await Promise.all([get<Board>('/api/board', fresh), get<Me>('/api/me', true)]);
   board = data;
   me = session;
   showShiftPill(null, data.pause);
   renderBoard(data);
   renderPass();
-  await renderRecord(data.round.id);
+  await renderRecord(data.round.id, fresh);
 }
+
+const refreshNow = (): Promise<void> => refresh(true);
 
 const text = byId<HTMLTextAreaElement>('task-text');
 text.addEventListener('input', () => setText('task-count', String(text.value.length)));
@@ -248,7 +250,7 @@ byId<HTMLFormElement>('propose-form').addEventListener('submit', (event) => {
         text.value = '';
         setText('task-count', '0');
       }
-      return refresh();
+      return refreshNow();
     })
     .catch((cause: unknown) => {
       message.textContent = cause instanceof ApiError ? cause.message : errorText(cause);
@@ -274,4 +276,4 @@ setInterval(() => {
 
 listenForWallets(() => { if (maybeId('pass') && !me.wallet) renderPass(); });
 showMintChip();
-poll(refresh, () => 45_000);
+poll(() => refresh(), () => 45_000);

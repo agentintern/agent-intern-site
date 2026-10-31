@@ -12,7 +12,10 @@ async function parse<T>(response: Response): Promise<T> {
   return body as T;
 }
 
-export const get = async <T>(path: string): Promise<T> => parse<T>(await fetch(path));
+// Reads are cached for a few seconds to spare the free tier. After your own action, `fresh` skips
+// that cache, or you'd see the page from before you acted.
+export const get = async <T>(path: string, fresh = false): Promise<T> =>
+  parse<T>(await fetch(path, fresh ? { cache: 'no-store' } : {}));
 
 export const post = async <T>(path: string, body: unknown): Promise<T> =>
   parse<T>(await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }));

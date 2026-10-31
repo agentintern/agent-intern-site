@@ -49,8 +49,8 @@ window.addEventListener('message', (event) => {
   message.className = '';
 });
 
-async function loadBoard(): Promise<void> {
-  const { scores } = await get<{ scores: Row[] }>('/api/leaderboard');
+async function loadBoard(fresh = false): Promise<void> {
+  const { scores } = await get<{ scores: Row[] }>('/api/leaderboard', fresh);
   const list = byId('leaderboard');
   if (scores.length === 0) {
     fill(list, h('li', { class: 'empty' }, 'Nobody yet. The desk is yours.'));
@@ -74,7 +74,7 @@ form.addEventListener('submit', (event) => {
     run = null;
     form.hidden = true;
     byId('score-empty').hidden = false;
-    return loadBoard();
+    return loadBoard(true);
   }).catch((cause: unknown) => {
     message.textContent = cause instanceof ApiError ? cause.message : 'That did not save.';
     message.className = 'error';
@@ -83,4 +83,4 @@ form.addEventListener('submit', (event) => {
 });
 
 void initChrome();
-poll(loadBoard, () => 120_000);
+poll(() => loadBoard(), () => 120_000);
