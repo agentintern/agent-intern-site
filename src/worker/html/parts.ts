@@ -55,11 +55,19 @@ export function shiftLine(o: Pick<Overview, 'open' | 'pause'>): { label: string;
   };
 }
 
-export function punchClock(closesAt: number, label = 'Vote closes in'): Safe {
-  const left = Math.max(0, closesAt - Date.now());
+function clockText(closesAt: number): string {
   const pad = (n: number): string => String(n).padStart(2, '0');
-  const total = Math.floor(left / 1000);
-  const text = `${pad(Math.floor(total / 3600))}:${pad(Math.floor(total / 60) % 60)}:${pad(total % 60)}`;
+  const total = Math.floor(Math.max(0, closesAt - Date.now()) / 1000);
+  return `${pad(Math.floor(total / 3600))}:${pad(Math.floor(total / 60) % 60)}:${pad(total % 60)}`;
+}
+
+// The state of the project in one line, from the same data as the header. Links to the live page.
+export function stateChip(state: { label: string; on: boolean; paused: string | null }, closesAt: number): Safe {
+  return html`<a class="state-chip${state.on ? ' on' : ''}${state.paused ? ' paused' : ''}" id="hero-chip" data-live="chip" href="/live"><i aria-hidden="true"></i><b>${state.label}</b><span>vote closes in <span data-countdown="${closesAt}">${clockText(closesAt)}</span></span></a>`;
+}
+
+export function punchClock(closesAt: number, label = 'Vote closes in'): Safe {
+  const text = clockText(closesAt);
   return html`<div class="punch" role="timer" aria-label="${label}"><span class="punch-label">${label}</span><b data-countdown="${closesAt}">${text}</b><span class="punch-card">closes ${when(closesAt)}</span></div>`;
 }
 

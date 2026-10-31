@@ -11,7 +11,7 @@ import { getShift, listShifts, WORK_LABELS } from '../shifts';
 import { changelog, liveFeed, shiftDetail, status as statusData } from '../status';
 import { html, shortAddress, when, type Safe } from './core';
 import type { Page } from './layout';
-import { inTray, passLine, punchClock, robotFor, robotPanel, shiftLine, shiftRow, stamp, STATE_WORDS, whiteboard, workLabel } from './parts';
+import { inTray, passLine, punchClock, robotFor, robotPanel, shiftLine, shiftRow, stamp, STATE_WORDS, stateChip, whiteboard, workLabel } from './parts';
 
 const title = (text: string, sub?: string): Safe => html`<header class="page-head"><h1>${text}</h1>${sub ? html`<p class="lede">${sub}</p>` : ''}</header>`;
 
@@ -26,15 +26,20 @@ export async function homePage(env: Env): Promise<Rendered> {
     description: 'We hired an AI intern. Holders are its boss. Holders vote, the intern ships it, and a person starts every shift.',
     refresh: 45,
     state: shiftLine(o),
-    body: html`
-<section class="hero" aria-labelledby="hero-title">
-<div class="scene" id="scene" data-state="${state}" data-level="${o.level.index}" data-on="${o.open ? '1' : '0'}" data-closes="${o.round.closes_at}" data-commit="${o.lastCommit ? `${o.lastCommit.sha.slice(0, 7)} ${o.lastCommit.message}` : 'no commits yet'}">
-<div class="scene-fallback">${robotPanel(state, `The robot intern, ${state}`)}</div>
-</div>
-<div class="hero-copy">
+    stage: html`
+<section class="stage" aria-labelledby="hero-title">
+<div class="stage-art" id="stage-art" aria-hidden="true"><img class="stage-poster" src="/img/robot-poster.webp" width="1600" height="1000" alt="" fetchpriority="high"></div>
+<div class="stage-text">
+${stateChip(shiftLine(o), o.round.closes_at)}
 <h1 id="hero-title">We hired an AI intern. <em>Holders are its boss.</em></h1>
 <p class="sub">It builds a browser game in public. Holders vote, the intern ships it. A person starts every shift, and the bad days stay on the page.</p>
 <div class="btn-row"><a class="btn big" href="/play">Play the game</a><a class="btn ghost" href="/board">Vote on the next task</a><a class="btn ghost" href="/proof">Check the claims</a></div>
+</div>
+</section>`,
+    body: html`
+<section class="office-view" aria-label="The office tonight">
+<div class="scene" id="scene" data-state="${state}" data-level="${o.level.index}" data-on="${o.open ? '1' : '0'}" data-closes="${o.round.closes_at}" data-commit="${o.lastCommit ? `${o.lastCommit.sha.slice(0, 7)} ${o.lastCommit.message}` : 'no commits yet'}">
+<div class="scene-fallback">${robotPanel(state, `The robot intern, ${state}`)}</div>
 </div>
 </section>
 <div data-live="home" id="home-live">

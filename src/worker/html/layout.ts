@@ -9,6 +9,8 @@ export interface Page {
   title: string;
   description: string;
   body: Safe;
+  // Full-width content above the page's column.
+  stage?: Safe;
   image?: string;
   // Seconds between refreshes of the [data-live] parts. Zero means the page doesn't change.
   refresh?: number;
@@ -97,7 +99,7 @@ ${mintChip()}
 <button class="sound-toggle" type="button" id="sound-toggle" aria-pressed="false" hidden>Sound off</button>
 </div>
 </header>
-<main id="main"><div class="wrap">
+<main id="main">${page.stage ?? ''}<div class="wrap">
 ${page.body}
 </div></main>
 <footer class="foot">

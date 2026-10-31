@@ -36,6 +36,7 @@ async function boot(): Promise<void> {
   setInterval(tickClocks, 1000);
   const page = document.body.dataset.page;
 
+  if (document.getElementById('stage-art')) void import('./stage').then((m) => m.startStage());
   if (document.getElementById('scene')) void import('./scene').then((m) => { m.startScene(); hooks.push(m.syncScene); });
   if (page === 'board') {
     const m = await import('./board');
