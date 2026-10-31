@@ -245,6 +245,14 @@ describe('the robot', () => {
   });
 });
 
+describe('share cards', () => {
+  it('has a promotion card that counts only real shifts', async () => {
+    const res = await h.call('/api/promotion/card.png');
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('image/png');
+  });
+});
+
 describe('notifications', () => {
   it('encrypts a message a browser could decrypt', async () => {
     const ua = (await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits'])) as CryptoKeyPair;

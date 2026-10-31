@@ -460,11 +460,13 @@ export async function promotionsPage(env: Env): Promise<Rendered> {
     path: '/promotions',
     title: 'The Promotion Track | Agent Intern',
     description: 'The intern moves up through real shipped work. Rehearsals and team changes do not count.',
+    image: `${SITE.siteOrigin}/api/promotion/card.png`,
     refresh: 300,
     state: shiftLine(o),
     body: html`
 ${title('The Promotion Track', 'Only real intern shifts that shipped count. Rehearsals and team changes never do.')}
 <p class="callout" id="promo-now">Current title: <b>${level.title}</b>. ${counts.internShipped} real ${counts.internShipped === 1 ? 'shift' : 'shifts'} shipped.${level.next ? ` ${level.next.at - counts.internShipped} more to ${level.next.title}.` : ''}</p>
+<p><a class="btn ghost" href="https://x.com/intent/post?text=${encodeURIComponent(`the intern's title: ${level.title.toLowerCase()}. ${counts.internShipped} real shifts shipped. rehearsals don't count. ${SITE.siteOrigin}/promotions`)}">Post on X</a></p>
 <ol class="ladder">${PROMOTIONS.map((p, i) => html`<li class="paper${i === level.index ? ' current' : ''}${i > level.index ? ' locked' : ''}"><h2>${p.title}</h2><p class="hint">${p.at === 0 ? 'Day one' : `${p.at} shipped shifts`}</p><p>${p.unlock}</p>${i <= level.index ? html`<span class="stamp good">Unlocked</span>` : ''}</li>`)}</ol>`,
   };
 }

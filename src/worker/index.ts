@@ -3,7 +3,7 @@ import { meetsThreshold, readBalance } from './balance';
 import { dayNumber } from '../shared/daily';
 import { siteOrigin, SITE, testMode, threshold } from './config';
 import { propose, publicVotes, requestNonce, setTestBalance, vote } from './board';
-import { bossCard, dailyCard, homeCard, shipCard, taskCard } from './card';
+import { bossCard, dailyCard, homeCard, promotionCard, shipCard, taskCard } from './card';
 import type { Ctx, Env } from './env';
 import { apiPage, aboutPage, brandPage, embedStatus, howPage, proofPage, sandboxFrame, sandboxPage, securityPage, tokenPage } from './html/content';
 import { feed, llmsTxt, manifest, mcp, robots, securityTxt, sitemap } from './html/machine';
@@ -198,6 +198,10 @@ async function getRoute(request: Request, env: Env, ctx: Ctx, url: URL, origin: 
       if (day < 1 || day > dayNumber(Date.now())) throw new HttpError(404, 'That day has not happened.');
       const scores = await leaderboard(env, day);
       return png(await dailyCard(day, scores[0]?.score ?? null), 300);
+    }
+    if (pathname === '/api/promotion/card.png') {
+      const { internShipped } = await shiftCounts(env);
+      return png(await promotionCard(promotionLevel(internShipped).title, internShipped), 300);
     }
     if (pathname === '/api/card.png') return png(await homeCard(), 86400);
     if ((match = pathname.match(/^\/api\/votes\/(\d{1,9})$/))) return json(await publicVotes(env, Number(match[1])), { maxAge: 5 });
