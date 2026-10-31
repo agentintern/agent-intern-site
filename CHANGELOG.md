@@ -6,6 +6,8 @@ The game's versions are at https://agentintern.online/changelog. This file cover
 
 - Removed the TEST MODE ribbon from every page. Balances are still fake, and /board says so.
 - Added the project's X account to the footer.
+- Added the limit of the gate claim to /proof: team maintenance goes through pull requests a person merges.
+- Made LICENSE the plain MIT text, and moved the font note to the README.
 
 ## Launch night, 2026-10-31
 

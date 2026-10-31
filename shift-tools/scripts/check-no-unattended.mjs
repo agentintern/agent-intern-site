@@ -25,11 +25,12 @@ const WORKFLOW_FORBIDDEN = [
   ['a run on pull_request (it would use the branch copy of the workflow)', /^\s*pull_request\s*:/m],
 ];
 
-// The two exceptions, by exact path. Scorecard is a weekly scan with no way to start a shift. The site's CI holds no
-// secrets and deploys nothing, so a branch copy of it can do no harm.
+// The exceptions, by exact path. Scorecard is a weekly scan with no way to start a shift. The site's CI holds no
+// secrets and deploys nothing, so a branch copy of it can do no harm. The game's maintenance check names no secrets,
+// deploys nothing, and only runs on shift/maintenance-* branches, which a person opens and merges.
 const ALLOWED = {
   'a workflow schedule': new Set(['.github/workflows/scorecard.yml']),
-  'a run on pull_request (it would use the branch copy of the workflow)': new Set(['.github/workflows/ci.yml']),
+  'a run on pull_request (it would use the branch copy of the workflow)': new Set(['.github/workflows/ci.yml', '.github/workflows/maintenance.yml']),
 };
 
 // Only the proxy's allowlist may name Claude's API host. If the site ever did, it would be

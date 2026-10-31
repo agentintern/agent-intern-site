@@ -123,6 +123,11 @@ the hostile-game test in `scripts/browser-check.mjs` proves the wall holds witho
 
 **Version is `0.1.<shift number>`,** set by the gate, because `package.json` is off limits to a shift.
 
+**Team maintenance skips the gate and says so.** `shift/maintenance-*` branches used to fail the gate and then get merged,
+next to the claim that nothing ships without it. They now skip every gate job, so they can't deploy or merge from there,
+and `maintenance.yml` checks them. `/proof` says a check fails game code changes, not that they can't happen: the check
+isn't required by a ruleset, and it runs from the branch, so a person merging is still what decides.
+
 ## Infrastructure
 
 **Pages Functions are the Worker.** Same origin as the pages, so no CORS, and `SameSite=Strict` cookies

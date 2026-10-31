@@ -125,6 +125,7 @@ interface Claim {
   id: string;
   claim: string;
   evidence: Safe;
+  limit?: string;
   command: string;
 }
 
@@ -143,6 +144,7 @@ export function claims(origin: string, gameOrigin: string): Claim[] {
     {
       id: 'gate', claim: 'Nothing ships without the gate, and a shift cannot edit the gate.',
       evidence: html`<a href="${GAME}/blob/main/.github/workflows/gate.yml">The workflow</a>, <a href="${GAME}/blob/main/gate/rules.mjs">its rules</a>. Real runs: <a href="${RUNS.attack}">an attack rejected</a> (<a href="/shift/3">shift 3</a>), <a href="${RUNS.clean}">a clean change shipped</a> (<a href="/shift/4">shift 4</a>). Shift 3's page says the rules job didn't finish because of a reporting bug fixed after it. The run shows the real reasons.`,
+      limit: "Team maintenance doesn't go through the gate. Docs, CI and the gate's own rules change through pull requests a person merges. They never deploy, and a check fails any that touch game code. GitHub doesn't stop a person merging past that check.",
       command: `curl -s ${origin}/api/shifts/3 | jq '.gate'`,
     },
     {
@@ -193,7 +195,7 @@ export async function proofPage(env: Env, origin: string): Promise<Rendered> {
     body: html`
 ${title('Proof', "Every public claim, with its evidence and a command you can run. If a claim can't be proved, it comes off the site.")}
 <p class="callout">Biggest open item: no real intern shift has run yet. <a href="/status">The status page</a> lists what's still unproved.</p>
-<ol class="proof">${claims(origin, SITE.gameOrigin).map((c) => html`<li class="paper" id="${c.id}"><h2>${c.claim}</h2><p>${c.evidence}</p><pre><code>${c.command}</code></pre><button class="btn ghost small" type="button" data-copy="${c.command}">Copy command</button></li>`)}</ol>`,
+<ol class="proof">${claims(origin, SITE.gameOrigin).map((c) => html`<li class="paper" id="${c.id}"><h2>${c.claim}</h2><p>${c.evidence}</p>${c.limit ? html`<p><b>Limit.</b> ${c.limit}</p>` : ''}<pre><code>${c.command}</code></pre><button class="btn ghost small" type="button" data-copy="${c.command}">Copy command</button></li>`)}</ol>`,
   };
 }
 

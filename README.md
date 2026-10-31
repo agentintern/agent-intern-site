@@ -65,3 +65,7 @@ npm run scan           # secrets in the full history
 ```
 
 MIT licensed. See [SECURITY.md](SECURITY.md), [CONTRIBUTING.md](CONTRIBUTING.md) and [ROADMAP.md](ROADMAP.md).
+
+## Third-party
+
+The fonts in `public/fonts` are under the SIL Open Font License. Their license files sit next to them.

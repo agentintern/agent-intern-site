@@ -64,6 +64,12 @@ describe('every page, as a fetch sees it', () => {
     expect((await page('/status')).text).toContain('TEST MODE');
   });
 
+  it('states the limit of the gate claim on the proof page', async () => {
+    const { text } = await page('/proof');
+    expect(text).toContain('<b>Limit.</b>');
+    expect(text).toContain('pull requests a person merges');
+  });
+
   it('answers a missing page with the empty desk', async () => {
     const { status, text } = await page('/nope');
     expect(status).toBe(404);
