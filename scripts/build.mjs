@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { build } from 'esbuild';
 import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 
@@ -29,6 +30,12 @@ await build({
   legalComments: 'none',
   logLevel: 'error',
 });
+
+// The zone keeps these two for 4 hours whatever they say, so the URL has to change when they do. Chunk names already
+// carry a hash, and app.js names them, so this covers all the JS.
+const hash = createHash('sha256');
+for (const file of ['dist/site.css', 'dist/js/app.js']) hash.update(await readFile(file));
+await writeFile('config/assets.json', `${JSON.stringify({ version: hash.digest('hex').slice(0, 10) })}\n`);
 
 await rm('dist/_headers', { force: true });
 await writeFile('dist/_headers', await readFile('public/_headers', 'utf8'));

@@ -1,3 +1,4 @@
+import ASSETS from '../../../config/assets.json';
 import { SITE, siteOrigin, testMode, mint } from '../config';
 import type { Env } from '../env';
 import { html, raw, type Safe } from './core';
@@ -45,9 +46,6 @@ function mintChip(): Safe | null {
   return html`<div class="chip-row"><button class="pill" type="button" data-copy="${value}" aria-label="Copy the contract address">CA ${value.slice(0, 4)}...${value.slice(-4)}</button><a class="pill" href="https://solscan.io/token/${value}">Solscan</a></div>`;
 }
 
-// These two files revalidate on every visit, so a deploy needs no bump. This only moves past a copy stuck at the edge.
-const ASSETS_VERSION = 2;
-
 export function renderPage(env: Env, page: Page, state: { label: string; on: boolean; paused: string | null }): string {
   const origin = siteOrigin(env);
   const url = `${origin}${page.path === '/' ? '' : page.path}` || origin;
@@ -73,7 +71,7 @@ ${page.noindex ? raw('<meta name="robots" content="noindex">') : ''}
 <link rel="alternate" type="application/rss+xml" title="Agent Intern shifts" href="/feed.xml">
 <link rel="preload" href="/fonts/pixelify-sans-600.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/inter-400.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/site.css?v=${ASSETS_VERSION}">
+<link rel="stylesheet" href="/site.css?v=${ASSETS.version}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Agent Intern">
 <meta property="og:title" content="${page.title}">
@@ -84,7 +82,7 @@ ${page.noindex ? raw('<meta name="robots" content="noindex">') : ''}
 <meta name="twitter:title" content="${page.title}">
 <meta name="twitter:description" content="${page.description}">
 <meta name="twitter:image" content="${image}">
-<script type="module" src="/js/app.js?v=${ASSETS_VERSION}"></script>
+<script type="module" src="/js/app.js?v=${ASSETS.version}"></script>
 </head>
 <body data-page="${page.path.split('/')[1] || 'home'}" data-refresh="${page.refresh ?? 0}" data-test-mode="${testMode() ? '1' : '0'}" data-shift="${state.on ? 'on' : 'off'}">
 <a class="skip" href="#main">Skip to content</a>
