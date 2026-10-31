@@ -59,7 +59,13 @@ await build({
   logLevel: 'error',
 });
 
+// no-transform stops the edge from adding anything to our HTML. On a custom domain Cloudflare injects
+// an analytics script otherwise, and these are the pages where people sign with a wallet.
+const htmlRoutes = pages(options)
+  .map((page) => (page.file === 'index.html' ? '/' : `/${page.file.replace(/\.html$/, '')}`))
+  .map((route) => `${route}\n  Cache-Control: public, max-age=0, must-revalidate, no-transform\n`)
+  .join('\n');
 const headers = (await readFile('public/_headers', 'utf8')).replaceAll('__GAME_ORIGIN__', gameOrigin);
-await writeFile('dist/_headers', headers);
+await writeFile('dist/_headers', `${headers}\n${htmlRoutes}`);
 await rm('.build', { recursive: true, force: true });
 console.log(`built in ${tokenOn ? 'live' : 'test'} mode`);

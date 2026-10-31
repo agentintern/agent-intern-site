@@ -1,6 +1,6 @@
 # Report
 
-**Site:** https://agent-intern.pages.dev **Game:** https://agent-intern-play.pages.dev
+**Site:** https://agentintern.online **Game:** https://play.agentintern.online
 
 TEST MODE. No mint is set, and token features are compiled out. Both are live on Cloudflare.
 
@@ -21,19 +21,22 @@ they need two things from the owner. See [What's left](#whats-left). The site do
 
 ## What ran in production
 
-Run against the live URLs on 2026-10-31.
+Run against the live URLs on 2026-10-31. The browser suite and Lighthouse were rerun on the real domain.
+The other rows ran on the `pages.dev` addresses, on the same code.
 
 | Check | Result |
 | --- | --- |
-| Browser suite in Chromium and WebKit: all pages, 375 px, no console errors, no token words, holder flow, the game in its sandbox | 70 of 70 |
+| Browser suite in Chromium on the real domain: all pages, 375 px, no console errors, nothing from third parties, no token words, holder flow, the game in its sandbox | 81 of 81 |
+| The same suite in WebKit on the real domain | Not run yet: this machine's DNS cache still rejects the new domain, and WebKit can't bypass it. Passed on the `pages.dev` addresses. |
+| Attacks on the live site from inside the live frame: read the session, post a vote, read or overwrite the cookie, `document.domain` | All blocked. Real requests show the browser sends the cookie to the site and not to the game. |
 | A full round through the real API: signed task, screening, 3 signed votes, the lazy close, the queue | Worked, twice. Only the close time was moved. |
 | The real agent check on 24 tasks, 18 of them never used to tune it | 24 of 24 |
 | The live feed with the real watcher: state, files and test counts | Worked |
 | A fake secret planted in a file name | Replaced by a public "removed" notice. Not in any public API. |
 | A refused shift and a failed shift on `/history` | Both show, labeled REHEARSAL, with ship cards |
 | A broken build deployed to the live game origin | The live check failed it, the Cloudflare rollback API restored the last good version in 26 s, and the check then passed. Commands run by hand. See below. |
-| Lighthouse mobile on the home page, 3 runs | Performance 100, accessibility 100 |
-| Home page JS | 6.9 KB gzipped, budget 80 KB |
+| Lighthouse mobile on the real domain, 3 runs | Performance, accessibility, best practices and SEO all 100 |
+| Home page JS | 6.6 KB gzipped, budget 80 KB |
 | Game | 60 fps in headless Chromium, including at 4x CPU throttle |
 
 **Rehearsals are labeled because no intern ran.** Shifts 1 and 2 used the real commands, but a person's
@@ -83,5 +86,7 @@ Unit tests: game 16, gate 65, site 119, shift tools 67.
 - **Balances are read on the first request after close,** not at the exact second. See `DECISIONS.md`.
 - **Free tier:** 100,000 API requests a day, about 270 viewer-hours of `/live` during a shift. Past that,
   the API stops until the next day, while static pages and the game keep working.
+- **HTML isn't compressed.** `no-transform` keeps Cloudflare from injecting its analytics script, and it
+  turns off edge compression for those pages too. A page is about 10 KB, and Lighthouse still scores 100.
 - **The workspace folder is in iCloud Drive,** which has been writing conflict copies inside `.git`. No
   damage so far. Tokens and keys live in `~/.agent-intern`, outside iCloud.

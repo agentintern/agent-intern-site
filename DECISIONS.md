@@ -25,6 +25,12 @@ game. What does: the sandbox gives the game an opaque origin, which is never sam
 subdomain; and writes need an exact `Origin`. `scripts/browser-check.mjs` attacks the live site from
 inside the live frame to prove it.
 
+**HTML is served with `no-transform`.** On a custom domain Cloudflare injects an analytics script. The CSP
+blocked it, which put a console error on every page and would have made the gate's live check fail and
+roll back every good deploy. Widening the CSP would let a third party run on pages where people sign with
+a wallet. `no-transform` stops the edge from changing our HTML at all, and it lives in the repo, so it
+doesn't depend on a dashboard setting. The cost is no edge compression on those pages.
+
 ## Screening
 
 **The agent check uses Workers AI, not Claude.** The rules rule out sending visitors' text to Claude

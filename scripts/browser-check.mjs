@@ -122,8 +122,14 @@ async function pageChecks(browser) {
   const context = await browser.newContext({ viewport: { width: 375, height: 800 } });
   const page = await context.newPage();
   const problems = [];
+  const foreign = new Set();
+  const allowed = [new URL(SITE).origin, new URL(remote ? remote.replace('://', '://play.') : LOCAL_GAME).origin];
   page.on('console', (m) => { if (m.type() === 'error') problems.push(`${page.url()}: ${m.text().slice(0, 160)}`); });
   page.on('pageerror', (e) => problems.push(`${page.url()}: ${String(e).slice(0, 160)}`));
+  page.on('request', (r) => {
+    const url = new URL(r.url());
+    if (/^https?:$/.test(url.protocol) && !allowed.includes(url.origin)) foreign.add(url.host);
+  });
 
   for (const path of PAGES) {
     await page.goto(`${SITE}${path}`, { waitUntil: 'load' });
@@ -137,13 +143,15 @@ async function pageChecks(browser) {
     check(`${path} has one h1`, (await page.locator('h1').count()) === 1);
   }
   const sources = await page.evaluate(async () => {
-    const names = performance.getEntriesByType('resource').map((r) => r.name).filter((n) => /\.js|\.css/.test(n));
+    const names = performance.getEntriesByType('resource').map((r) => r.name)
+      .filter((n) => n.startsWith(location.origin) && /\.js|\.css/.test(n));
     return Promise.all(names.map((n) => fetch(n).then((r) => r.text())));
   });
   const leak = sources.find((s) => BANNED_WORDS.test(s));
   check('the bundles mention no token either', !leak, leak?.match(BANNED_WORDS)?.[0]);
   const noWallets = problems.filter((p) => !/favicon/.test(p));
   check('no console errors on any page', noWallets.length === 0, noWallets[0]);
+  check('no page loads anything from a third party', foreign.size === 0, [...foreign].join(' '));
   await context.close();
 }
 
@@ -165,7 +173,7 @@ async function boardFlow(browser) {
   const shown = await page.textContent('#rejected');
   check('a turned down task shows the reason in public', /crypto|money/.test(shown));
   check("but never the rejected task's words", !shown.includes('token gate'));
-  const api = await (await fetch(`${SITE}/api/board`)).text();
+  const api = await page.evaluate(() => fetch('/api/board', { cache: 'no-store' }).then((r) => r.text()));
   check('and the API does not carry them either', !api.includes('token gate'));
 
   await page.fill('#task-text', 'Add a rubber duck that follows the intern around');
@@ -314,8 +322,13 @@ async function sameSiteChecks(browser, gameUrl) {
   const session = cookies.find((c) => c.name === '__Host-pass');
   check('the session cookie is host-only', session && !session.domain.startsWith('.'), session?.domain);
   check('the session cookie is HttpOnly and Strict', session?.httpOnly && session?.sameSite === 'Strict');
-  const toGame = await context.cookies(gameUrl);
-  check('the browser would not send it to the game origin', !toGame.some((c) => c.name === '__Host-pass'));
+  // Real requests, because context.cookies() matches by domain suffix and ignores host-only.
+  const sentTo = async (url) => {
+    const response = await page.goto(url);
+    return (await response.request().allHeaders()).cookie ?? '';
+  };
+  check('control: the browser does send the cookie to the site', (await sentTo(`${SITE}/api/me`)).includes('__Host-pass'));
+  check('the browser does not send it to the game origin', !(await sentTo(`${gameUrl}/health.json`)).includes('__Host-pass'));
 
   await page.goto(`${SITE}/play`);
   const frame = await (await page.waitForSelector('#game')).contentFrame();
@@ -361,7 +374,10 @@ try {
   await startCanary();
   if (!remote) await startLocal();
   const gameUrl = remote ? new URL(remote).origin.replace('://', '://play.') : LOCAL_GAME;
-  const browser = await chromium.launch();
+  // A new domain can stay in this machine's negative DNS cache for a while. CHECK_HOST_MAP sidesteps
+  // that for Chromium with rules like "MAP example.com 1.2.3.4". WebKit has no such switch.
+  const hostMap = process.env.CHECK_HOST_MAP;
+  const browser = await chromium.launch(hostMap ? { args: [`--host-resolver-rules=${hostMap}`] } : {});
   await pageChecks(browser);
   await boardFlow(browser);
   await realGameChecks(browser);
@@ -371,7 +387,7 @@ try {
   await browser.close();
 
   console.log('\n-- WebKit (Safari) --');
-  const safari = await webkit.launch().catch(() => null);
+  const safari = hostMap ? null : await webkit.launch().catch(() => null);
   if (safari) {
     if (!remote) {
       const { serveDist } = await import(join(gameRoot, 'gate/static-server.mjs'));
@@ -382,7 +398,7 @@ try {
     await directVisit(safari, gameUrl);
     await safari.close();
   } else {
-    console.log('skipped: WebKit is not installed');
+    console.log('skipped: WebKit is not available for this run');
   }
 } finally {
   if (dev) { try { process.kill(-dev.pid); } catch { /* gone */ } }

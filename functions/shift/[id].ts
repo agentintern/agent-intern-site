@@ -31,6 +31,7 @@ export async function onRequest(context: { request: Request; env: Env & { ASSETS
     status: shift ? 200 : 404,
     headers: {
       'content-type': 'text/html; charset=utf-8',
+      'cache-control': 'public, max-age=0, must-revalidate, no-transform',
       'content-security-policy': CSP,
       'x-content-type-options': 'nosniff',
       'x-frame-options': 'DENY',
