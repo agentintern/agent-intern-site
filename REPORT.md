@@ -9,6 +9,42 @@ yet. The history holds labeled rehearsals, a team change and a shift nobody work
 
 Shift 5's rollback is confirmed: `rolled-back` on the site, its pull request closed, and `main` clean.
 
+## Sealing the shift push, 2026-10-31
+
+A workflow in a pushed branch could read the game's deploy secrets before the gate looked. That's closed, in the three
+layers `docs/THREAT-MODEL.md` describes.
+
+| Check | Where | Result |
+| --- | --- | --- |
+| The real `shift:finish` on a workflow that's new, changed, deleted, renamed in and renamed out | Local, in a pseudo-terminal, with a fake site, origin and `gh` | All 5 refused: no `PUSH` prompt, nothing pushed, one failed post |
+| The same, with 7 flags and 7 environment variables meant to override it | Same | Refused |
+| Those tests before the fix | Same | All 6 failed on "it asked for PUSH", and the two clean-change controls passed |
+| The same tests on Linux, with Node 22, inside the shift image | Docker | Passed |
+| 9 off-limits paths, each 5 ways | Local | 45 of 45 refused |
+| The refusal against the game's real `pathRule` | Local | Same answer on the whole table and every tracked file |
+| Breaking the fix on purpose, 4 ways | Local | The tests caught all 4 |
+| Shift tools tests, the unattended check, the container attacks | Local | 128 of 128, 0 findings, 49 of 49 |
+| [A workflow in a branch](https://github.com/agentintern/agent-intern-game/actions/runs/41244479493), repo-level secrets still set | GitHub | Saw all 3 |
+| Its job that asked for the Environment | GitHub | Refused before running a step |
+| `env-check` under `pull_request_target`, which is how the gate runs | GitHub | Passed |
+| `env-check` on `main` after the repo-level secrets were deleted | GitHub | Passed, so the Environment's secrets work alone |
+| The same branch workflow after that | GitHub | All 3 empty, and its Environment job refused again |
+| `gh secret list` on the repo | GitHub | 0 secrets. All 3 are on `production` |
+| `live check` required on `main` | GitHub | Added. A maintenance pull request with it skipped still shows as ready to merge |
+| A push ruleset on `.github/**` | GitHub | Refused: "Source public repos cannot have push rules", and only org-owned repos can have them |
+
+**The login in the container works.** `npm run shift:login` opened the real container with an empty folder, a person logged
+in, and the model answered through the proxy. No shift was opened. `/status` says `Claude API account`, but the login is a
+subscription: billing type `stripe_subscription`, no API key, extra usage off.
+
+**Not proved.**
+
+- The gate's full path, deploy included. Only the first real shift runs it, so the new Cloudflare token and the
+  Environment's `GATE_TOKEN` have never been used. Watch the deploy, tell the site and merge jobs.
+- That `live check` stops anything beyond a race. A skip counts as passed, so it doesn't stop a `shift/maintenance-*` branch.
+  A rejected shift skipping it and a branch job named `live check` are from how GitHub works, not from a test.
+- That the deploy key behaves the same. It wasn't tried again, because that needs a push.
+
 ## The office in 3D, 2026-10-31
 
 **Live in production.** It ran on a preview first, and went to production after a person approved it. The first deploy
@@ -136,7 +172,7 @@ it is removed, `main` is back on its own commit, and the rulesets now have no ex
 
 | Item | Why it isn't done |
 | --- | --- |
-| A real shift: login in the container, `/shift`, the intern refusing a bad task | Only a person can do this. `CLAUDE.md` hasn't been tested on a live session, so this is the biggest open question. |
+| A real shift: `/shift`, the intern refusing a bad task | Only a person can do this. The login works, but `CLAUDE.md` hasn't been tested on a live session, so this is the biggest open question. |
 | A person playing the game | "Fun" so far means bots and screenshots. |
 | A real mid-range phone | Only simulated with a CPU throttle. WebKit ran on a Mac, not on an iPhone. |
 | A real wallet extension | Signing ran with test keys. The Wallet Standard and legacy paths are untested. |
