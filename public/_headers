@@ -4,10 +4,18 @@
   Referrer-Policy: strict-origin-when-cross-origin
 
 /js/*
-  Cache-Control: public, max-age=300
+  Cache-Control: public, max-age=31536000, immutable
+
+/js/app.js
+  ! Cache-Control
+  Cache-Control: public, max-age=0, must-revalidate
+
+/js/sandbox-try.js
+  ! Cache-Control
+  Cache-Control: public, max-age=0, must-revalidate
 
 /site.css
-  Cache-Control: public, max-age=300
+  Cache-Control: public, max-age=0, must-revalidate
 
 /fonts/*
   Cache-Control: public, max-age=31536000, immutable
