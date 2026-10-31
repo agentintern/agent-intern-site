@@ -42,6 +42,7 @@ function shiftSummary(shift: ShiftRow): Record<string, unknown> {
     runUrl: shift.run_url,
     handEdited: shift.hand_edited === 1,
     rehearsal: shift.rehearsal === 1,
+    workedBy: shift.worked_by,
     filesChanged: shift.files_changed,
     linesAdded: shift.lines_added,
     linesRemoved: shift.lines_removed,
@@ -160,7 +161,7 @@ export async function shiftDetail(env: Env, id: number): Promise<Record<string, 
 export async function changelog(env: Env): Promise<Record<string, unknown>> {
   const rows = await env.DB.prepare(
     `SELECT s.id, s.version, s.commit_sha AS commitSha, s.ended_at AS at, s.summary, s.hand_edited AS handEdited,
-       s.rehearsal, t.text AS task, t.kind, t.proposer
+       s.rehearsal, s.worked_by AS workedBy, s.status, t.text AS task, t.kind, t.proposer
      FROM shifts s JOIN tasks t ON t.id = s.task_id
      WHERE s.status IN ('shipped', 'rolled-back') ORDER BY s.id DESC LIMIT 200`,
   ).all<{ proposer: string | null }>();

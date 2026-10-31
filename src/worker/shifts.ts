@@ -24,18 +24,28 @@ export interface ShiftRow {
   run_url: string | null;
   hand_edited: number;
   rehearsal: number;
+  worked_by: string;
   files_changed: number | null;
   lines_added: number | null;
   lines_removed: number | null;
   task_text: string;
   task_kind: 'holder' | 'intern';
+  task_team: number;
   proposer: string | null;
   votes: number;
   round_id: number | null;
 }
 
+// One word for who did the work, used everywhere a shift appears.
+export const WORK_LABELS: Record<string, { label: string; meaning: string }> = {
+  intern: { label: 'INTERN', meaning: 'The intern did this work in a shift a person started.' },
+  rehearsal: { label: 'REHEARSAL', meaning: 'A person ran this to test the pipeline. No model did the work.' },
+  team: { label: 'TEAM CHANGE', meaning: 'The people running the project made this change. It went through the same gate.' },
+  none: { label: 'NOT WORKED', meaning: 'The shift opened, but nobody did any work in it.' },
+};
+
 const SHIFT_SELECT = `
-  SELECT s.*, t.text AS task_text, t.kind AS task_kind, t.proposer, t.votes, t.round_id
+  SELECT s.*, t.text AS task_text, t.kind AS task_kind, t.team AS task_team, t.proposer, t.votes, t.round_id
   FROM shifts s JOIN tasks t ON t.id = s.task_id`;
 
 export async function openShift(env: Env): Promise<ShiftRow | null> {
@@ -81,13 +91,34 @@ export async function startShift(env: Env, body: { taskId?: unknown; rehearsal?:
   if (body.taskId !== next.id) throw new HttpError(409, 'The next task changed. Run it again.', 'task-changed');
 
   const inserted = await env.DB.prepare(
-    `INSERT INTO shifts (task_id, started_at, rehearsal) VALUES (?, ?, ?) RETURNING id`,
-  ).bind(next.id, Date.now(), body.rehearsal === true ? 1 : 0).first<{ id: number }>();
+    `INSERT INTO shifts (task_id, started_at, rehearsal, worked_by) VALUES (?, ?, ?, ?) RETURNING id`,
+  ).bind(next.id, Date.now(), body.rehearsal === true ? 1 : 0, body.rehearsal === true ? 'rehearsal' : 'intern').first<{ id: number }>();
   const id = inserted?.id;
   if (!id) throw new HttpError(500, 'That did not save.');
   await env.DB.prepare(`UPDATE tasks SET status = 'in-shift' WHERE id = ?`).bind(next.id).run();
   await logEvent(env, id, 'state', { state: 'reading' });
   const shift = await getShift(env, id);
+  if (!shift) throw new HttpError(500, 'That did not save.');
+  return shift;
+}
+
+// Work by the people who run the project, outside the queue. It goes through the same gate and is
+// labeled TEAM CHANGE in public. It never counts toward the intern's Promotion Track.
+export async function startTeamChange(env: Env, body: { text?: unknown }): Promise<ShiftRow> {
+  await advance(env);
+  if (await openShift(env)) throw new HttpError(409, 'A shift is already open.', 'shift-open');
+  const text = cleanText(body.text, 120);
+  if (!text) throw new HttpError(400, 'A team change needs a description.');
+  const now = Date.now();
+  const task = await env.DB.prepare(
+    `INSERT INTO tasks (text, kind, team, status, created_at) VALUES (?, 'intern', 1, 'in-shift', ?) RETURNING id`,
+  ).bind(text, now).first<{ id: number }>();
+  const inserted = await env.DB.prepare(
+    `INSERT INTO shifts (task_id, started_at, hand_edited, worked_by) VALUES (?, ?, 1, 'team') RETURNING id`,
+  ).bind(task?.id, now).first<{ id: number }>();
+  if (!inserted) throw new HttpError(500, 'That did not save.');
+  await logEvent(env, inserted.id, 'state', { state: 'reading' });
+  const shift = await getShift(env, inserted.id);
   if (!shift) throw new HttpError(500, 'That did not save.');
   return shift;
 }
@@ -235,7 +266,7 @@ async function endShift(env: Env, shift: ShiftRow, status: ShiftRow['status']): 
   await logEvent(env, shift.id, 'state', { state: status });
 }
 
-export async function receiveGateEvent(env: Env, body: GateBody): Promise<{ status: string }> {
+export async function receiveGateEvent(env: Env, body: GateBody): Promise<{ status: string; shift?: ShiftRow }> {
   const shift = typeof body.shiftId === 'number' ? await getShift(env, body.shiftId) : null;
   if (!shift) throw new HttpError(404, 'No such shift.', 'no-shift');
   if (typeof body.stage !== 'string' || !STAGES.has(body.stage)) throw new HttpError(400, 'Unknown gate stage.');
@@ -262,7 +293,7 @@ export async function receiveGateEvent(env: Env, body: GateBody): Promise<{ stat
   if (shift.status !== 'gate' && shift.status !== 'live') return { status: shift.status };
   if (body.status === 'pass') {
     await endShift(env, shift, 'shipped');
-    return { status: 'shipped' };
+    return { status: 'shipped', shift };
   }
   if (shift.attempt >= MAX_ATTEMPTS) {
     await endShift(env, shift, 'failed');

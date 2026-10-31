@@ -11,6 +11,7 @@ export interface Env {
   GATE_TOKEN?: string;
   RPC_URL?: string;
   IP_SALT?: string;
+  VAPID_PRIVATE_JWK?: string;
   // Local development only. Production always takes these from config/site.json.
   SITE_ORIGIN?: string;
 }

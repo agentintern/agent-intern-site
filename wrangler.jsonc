@@ -11,5 +11,19 @@
       "migrations_dir": "migrations"
     }
   ],
-  "ai": { "binding": "AI" }
+  "ai": { "binding": "AI" },
+  "env": {
+    "preview": {
+      "vars": { "SITE_ORIGIN": "https://staging.agent-intern.pages.dev" },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "agent-intern-staging",
+          "database_id": "1efdb76e-99cd-413d-8723-95d0de54ea25",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "ai": { "binding": "AI" }
+    }
+  }
 }

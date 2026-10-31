@@ -1,32 +1,11 @@
-import { ApiError, get, post } from './api';
-import { initChrome } from './chrome';
-import { byId, fill, h, poll } from './dom';
+import { dailySeed, dayNumber } from '../shared/daily';
+import { ApiError, byId, need, post, say, store } from './dom';
 
-interface Run {
-  score: number;
-  tasks: number;
-  coffees: number;
-  nearMisses: number;
-  duration: number;
-  seed: number;
-  version: string;
-}
+interface Run { score: number; tasks: number; coffees: number; nearMisses: number; duration: number; seed: number; version: string }
 
-interface Row {
-  name: string;
-  score: number;
-  version: string;
-}
+const isCount = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value) && value >= 0 && value < 1e10;
 
-const frame = byId<HTMLIFrameElement>('game');
-const form = byId<HTMLFormElement>('score-form');
-const message = byId('score-message');
-let run: Run | null = null;
-
-const isCount = (value: unknown): value is number => typeof value === 'number' && Number.isInteger(value) && value >= 0 && value < 1e7;
-
-// The sandboxed game can send one thing: the numbers from a finished run. Anything that isn't
-// exactly that shape, from exactly that frame, is dropped. Only copied numbers go any further.
+// The sandboxed game can send one thing: the numbers from a finished run. Only copied numbers go on.
 function readRun(data: unknown): Run | null {
   if (typeof data !== 'object' || data === null) return null;
   const d = data as Record<string, unknown>;
@@ -37,50 +16,82 @@ function readRun(data: unknown): Run | null {
   return { score: d.score, tasks: d.tasks, coffees: d.coffees, nearMisses: d.nearMisses, duration: d.duration, seed: d.seed, version: d.version };
 }
 
-window.addEventListener('message', (event) => {
-  if (event.source !== frame.contentWindow || event.origin !== 'null') return;
-  const finished = readRun(event.data);
-  if (!finished) return;
-  run = finished;
-  byId('score-value').textContent = finished.score.toLocaleString('en-US');
-  byId('score-empty').hidden = true;
-  form.hidden = false;
-  message.textContent = '';
-  message.className = '';
-});
-
-async function loadBoard(fresh = false): Promise<void> {
-  const { scores } = await get<{ scores: Row[] }>('/api/leaderboard', fresh);
-  const list = byId('leaderboard');
-  if (scores.length === 0) {
-    fill(list, h('li', { class: 'empty' }, 'Nobody yet. The desk is yours.'));
-    return;
-  }
-  fill(list, ...scores.slice(0, 10).map((row, i) =>
-    h('li', {},
-      h('span', {}, `${i + 1}. ${row.name}`),
-      h('span', { class: 'count' }, row.score.toLocaleString('en-US')),
-    )));
+function officeTime(duration: number): string {
+  const minutes = Math.round(9 * 60 + Math.min(1, duration / 90) * 8 * 60);
+  return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
 }
 
-form.addEventListener('submit', (event) => {
-  event.preventDefault();
-  if (!run) return;
-  const name = (byId<HTMLInputElement>('score-name')).value.trim();
-  const body = { ...run, name };
-  post<{ rank: number }>('/api/scores', body).then((result) => {
-    message.textContent = `Filed. You're number ${result.rank}.`;
-    message.className = 'ok';
-    run = null;
-    form.hidden = true;
-    byId('score-empty').hidden = false;
-    return loadBoard(true);
-  }).catch((cause: unknown) => {
-    message.textContent = cause instanceof ApiError ? cause.message : 'That did not save.';
-    message.className = 'error';
-    form.hidden = false;
-  });
-});
+const bar = (value: number, step: number, fill: string): string => {
+  const lit = Math.min(5, Math.ceil(value / step));
+  return fill.repeat(lit) + '⬛'.repeat(5 - lit);
+};
 
-void initChrome();
-poll(() => loadBoard(), () => 120_000);
+function shareText(day: number, run: Run): string {
+  const ending = run.duration >= 89 ? `clocked out ${officeTime(run.duration)}` : `fired at ${officeTime(run.duration)}`;
+  return [
+    `Last Day #${day} · ${ending} · ${run.tasks} tasks`,
+    bar(run.tasks, 5, '🟧'),
+    bar(run.coffees, 1, '🟦'),
+    bar(run.nearMisses, 2, '🟩'),
+    `${location.origin}/play/${day}`,
+  ].join('\n');
+}
+
+export function startPlay(): void {
+  const frame = need<HTMLIFrameElement>('game');
+  const form = need<HTMLFormElement>('score-form');
+  const message = byId('score-message');
+  let run: Run | null = null;
+
+  const fixedDay = Number(frame.dataset.day || 0);
+  frame.addEventListener('load', () => {
+    const target = frame.contentWindow;
+    if (!target) return;
+    try {
+      const bosses = JSON.parse(frame.dataset.hall ?? '[]') as unknown;
+      target.postMessage({ source: 'agent-intern-site', type: 'hall', bosses }, '*');
+    } catch {
+      // The wall just stays empty.
+    }
+    if (fixedDay) target.postMessage({ source: 'agent-intern-site', type: 'daily', day: fixedDay }, '*');
+  });
+
+  window.addEventListener('message', (event) => {
+    if (event.source !== frame.contentWindow || event.origin !== 'null') return;
+    const finished = readRun(event.data);
+    if (!finished) return;
+    const today = dayNumber(Date.now());
+    const daily = finished.seed === dailySeed(today);
+    const replayed = daily && store(`daily-${today}`) !== null;
+    if (daily && !replayed) store(`daily-${today}`, JSON.stringify(finished));
+
+    run = replayed ? { ...finished, seed: 0 } : finished;
+    need('score-value').textContent = finished.score.toLocaleString('en-US');
+    need('score-empty').hidden = true;
+    form.hidden = false;
+    say(message, replayed ? "Today's official attempt on this device is already in. This one counts as free play." : daily ? 'Your official Daily Shift attempt.' : '');
+
+    if (daily) {
+      const first = JSON.parse(store(`daily-${today}`) ?? 'null') as Run | null;
+      const text = shareText(today, first ?? finished);
+      need('share-text').textContent = text;
+      need<HTMLAnchorElement>('share-x').href = `https://x.com/intent/post?text=${encodeURIComponent(text)}`;
+      need('share-box').hidden = false;
+    }
+  });
+
+  need('share-copy').addEventListener('click', () => {
+    void navigator.clipboard.writeText(need('share-text').textContent ?? '').then(() => { need('share-copy').textContent = 'Copied'; });
+  });
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (!run) return;
+    post<{ rank: number; day: number | null }>('/api/scores', { ...run, name: need<HTMLInputElement>('score-name').value.trim() }).then((result) => {
+      say(message, `Filed. You're number ${result.rank}${result.day ? ' today' : ''}.`, 'ok');
+      run = null;
+      form.hidden = true;
+      need('score-empty').hidden = false;
+    }).catch((cause: unknown) => say(message, cause instanceof ApiError ? cause.message : 'That did not save.', 'error'));
+  });
+}

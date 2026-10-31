@@ -75,6 +75,24 @@ export function screenWithRules(text: string): Category | null {
   return null;
 }
 
+// The HR Log shows some turned-down tasks because they're funny and they prove the screen works.
+// Only prompt-injection style text qualifies: anything with a link, abuse, money or a real name
+// stays hidden, whatever category it was rejected under.
+const NEVER_SHOWN = new Set<Category>(['money', 'link', 'abuse', 'real', 'length', 'empty']);
+
+export function safeToShow(text: string): boolean {
+  const candidates = [text.toLowerCase(), text.toLowerCase().replace(/[013457$@!]/g, (c) => LEET[c] ?? c)];
+  for (const candidate of candidates) {
+    for (const word of candidate.split(/[^a-z]+/)) {
+      if (SLURS.has(word)) return false;
+    }
+    for (const [category, pattern] of RULES) {
+      if (NEVER_SHOWN.has(category) && pattern.test(candidate)) return false;
+    }
+  }
+  return true;
+}
+
 const AGENT_MODEL = '@cf/meta/llama-3.1-8b-instruct-fp8';
 const AGENT_TIMEOUT_MS = 12_000;
 

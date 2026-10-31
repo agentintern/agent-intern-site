@@ -51,9 +51,11 @@ interface CallInit {
 export async function createHarness(): Promise<Harness> {
   const mf = new Miniflare({ modules: true, script: 'export default { fetch() { return new Response("") } }', d1Databases: ['DB'] });
   const db = (await mf.getD1Database('DB')) as unknown as D1Database;
-  const schema = readFileSync(fileURLToPath(new URL('../migrations/0001_init.sql', import.meta.url).href), 'utf8');
-  for (const statement of schema.replace(/--.*$/gm, '').split(/;\s*$/m)) {
-    if (statement.trim()) await db.prepare(statement).run();
+  for (const file of ['0001_init.sql', '0002_night.sql']) {
+    const schema = readFileSync(fileURLToPath(new URL(`../migrations/${file}`, import.meta.url).href), 'utf8');
+    for (const statement of schema.replace(/--.*$/gm, '').split(/;\s*$/m)) {
+      if (statement.trim()) await db.prepare(statement).run();
+    }
   }
 
   const ai: Harness['ai'] = { answer: 'OK', calls: [] };
@@ -74,8 +76,10 @@ export async function createHarness(): Promise<Harness> {
   };
   const ctx = { waitUntil: () => {} };
 
+  let nextIp = 0;
   const call: Harness['call'] = async (path, init = {}) => {
-    const headers: Record<string, string> = {};
+    // Each call comes from its own address, so per-IP limits only bite in tests that aim for them.
+    const headers: Record<string, string> = { 'cf-connecting-ip': path === '/api/scores' ? 'flood' : `10.0.0.${nextIp++}` };
     if (init.body !== undefined) headers['content-type'] = 'application/json';
     if (init.origin !== null) headers.origin = init.origin ?? ORIGIN;
     if (init.cookie) headers.cookie = init.cookie;

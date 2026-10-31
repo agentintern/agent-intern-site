@@ -2,17 +2,18 @@ import { isWallet, issueNonce, requireSession, verifySigned, type SignedRequest 
 import { meetsThreshold, readBalance } from './balance';
 import { MAX_TASK_LENGTH, testMode } from './config';
 import type { Ctx, Env } from './env';
-import { HttpError } from './http';
-import { rateLimit } from './ratelimit';
+import { clientIp, HttpError } from './http';
+import { MINUTE, rateLimit } from './ratelimit';
 import { advance, applyAgentCheck, getRound, type Round } from './rounds';
 import { normalizeTask, REASONS, screenWithRules } from './screen';
 import { getPause } from './settings';
 
 const REJECTS_PER_ROUND = 5;
 
-export async function requestNonce(env: Env, wallet: unknown): Promise<{ nonce: string; issuedAt: string }> {
+export async function requestNonce(env: Env, request: Request, wallet: unknown): Promise<{ nonce: string; issuedAt: string }> {
   if (!isWallet(wallet)) throw new HttpError(400, "That isn't a wallet address.", 'bad-wallet');
-  await rateLimit(env, 'nonce', wallet, 30, 60_000);
+  await rateLimit(env, 'nonce-ip', clientIp(request), 60, MINUTE);
+  await rateLimit(env, 'nonce', wallet, 30, MINUTE);
   return issueNonce(env, wallet);
 }
 
@@ -77,6 +78,7 @@ export async function propose(env: Env, ctx: Ctx, request: Request, body: Propos
   const stored = text.slice(0, MAX_TASK_LENGTH);
   const now = Date.now();
 
+  await countScreen(env, category ?? 'submitted');
   if (category) {
     const inserted = await env.DB.prepare(
       `INSERT INTO proposals (round_id, wallet, text, status, reason, rejected_by, message, signature, created_at)
@@ -111,6 +113,7 @@ interface VoteBody extends SignedRequest {
 export async function vote(env: Env, request: Request, body: VoteBody): Promise<{ proposal: number; balance: string; slot: number }> {
   const wallet = await requireSession(env, request);
   if (wallet !== body.wallet) throw new HttpError(403, 'That is not the wallet you signed in with.', 'wrong-wallet');
+  await rateLimit(env, 'vote', wallet, 30, MINUTE);
   const round = await requireOpenRound(env, body.round);
   if (typeof body.proposal !== 'number') throw new HttpError(400, 'A vote needs a proposal.');
   const target = await env.DB.prepare('SELECT status, round_id FROM proposals WHERE id = ?')
@@ -141,9 +144,16 @@ export async function publicVotes(env: Env, roundId: number): Promise<unknown> {
   return { round: round.id, status: round.status, closesAt: round.closes_at, votes: votes.results };
 }
 
+export async function countScreen(env: Env, category: string): Promise<void> {
+  await env.DB.prepare(
+    `INSERT INTO screen_counts (category, n) VALUES (?1, 1) ON CONFLICT(category) DO UPDATE SET n = n + 1`,
+  ).bind(category).run();
+}
+
 export async function setTestBalance(env: Env, request: Request, balance: unknown): Promise<{ balance: string }> {
   if (!testMode()) throw new HttpError(404, 'Not found.');
   const wallet = await requireSession(env, request);
+  await rateLimit(env, 'test-balance', wallet, 20, MINUTE);
   if (typeof balance !== 'number' || !Number.isInteger(balance) || balance < 0 || balance > 1e12) {
     throw new HttpError(400, 'Pick a whole number.');
   }

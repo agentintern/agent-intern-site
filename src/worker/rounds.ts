@@ -2,6 +2,7 @@ import { BACKLOG, SITE } from './config';
 import { meetsThreshold, readBalance } from './balance';
 import type { Env } from './env';
 import { HttpError } from './http';
+import { countScreen } from './board';
 import { REASONS, screenWithAgent } from './screen';
 import { getPause } from './settings';
 
@@ -134,6 +135,7 @@ export async function applyAgentCheck(env: Env, id: number, text: string): Promi
     await env.DB.prepare(
       `UPDATE proposals SET status = 'rejected', reason = ?, rejected_by = 'agent' WHERE id = ? AND status = 'screening'`,
     ).bind(REASONS[verdict.category], id).run();
+    await countScreen(env, verdict.category);
   }
 }
 

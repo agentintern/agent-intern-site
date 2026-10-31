@@ -16,5 +16,6 @@
     "maxPointsPerCloseCall": 125,
     "maxTasksPerSecond": 2,
     "maxCloseCallsPerSecond": 2
-  }
+  },
+  "vapidPublic": ""
 }

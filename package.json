@@ -9,6 +9,8 @@
     "dev": "node scripts/build.mjs && wrangler pages dev dist --port 8788",
     "test": "vitest run",
     "test:browser": "node scripts/browser-check.mjs",
+    "lint": "node scripts/lint.mjs",
+    "scan": "node scripts/secret-scan.mjs --history",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.client.json",
     "db:local": "wrangler d1 migrations apply agent-intern --local",
     "db:remote": "wrangler d1 migrations apply agent-intern --remote",

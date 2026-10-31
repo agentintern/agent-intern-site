@@ -1,4 +1,5 @@
 import { GLYPHS } from '../shared/font';
+import { robotRows, type RobotState } from '../shared/robot';
 import type { ShiftRow } from './shifts';
 
 // A real PNG, built by hand, because X and most link previews can't show SVG. Pixels are written
@@ -7,17 +8,25 @@ const WIDTH = 1200;
 const HEIGHT = 630;
 
 const COLORS = {
-  paper: [245, 237, 216],
-  rule: [216, 205, 178],
-  ink: [28, 26, 38],
+  night: [11, 16, 32],
+  panel: [26, 34, 54],
+  line: [47, 58, 82],
+  paper: [245, 235, 216],
+  ink: [11, 16, 32],
+  orange: [255, 154, 60],
   red: [217, 64, 47],
-  blue: [58, 74, 120],
+  good: [95, 211, 163],
+  dim: [150, 160, 180],
+  steel: [174, 184, 200],
+  steelMid: [124, 136, 156],
+  steelDark: [74, 85, 104],
+  white: [245, 241, 232],
+  shirtShade: [207, 200, 184],
+  hot: [255, 242, 216],
+  visorDim: [90, 58, 32],
   yellow: [255, 216, 74],
-  white: [255, 253, 246],
-  skin: [242, 194, 155],
-  hair: [74, 47, 34],
-  green: [47, 138, 96],
-  dim: [120, 112, 96],
+  tieDark: [163, 44, 32],
+  legs: [47, 58, 82],
 } as const;
 type Color = keyof typeof COLORS;
 const INDEX = Object.fromEntries(Object.keys(COLORS).map((name, i) => [name, i])) as Record<Color, number>;
@@ -64,29 +73,27 @@ function wrap(text: string, width: number): string[] {
   return lines;
 }
 
-const INTERN = [
-  '..hhhhhh..',
-  '.hhhhhhhh.',
-  '.hssssssh.',
-  '.sksssksss',
-  '.ssssssss.',
-  '..sssss...',
-  '.wwwrrwww.',
-  'swwwrrwwws',
-  'swwwrrwwws',
-  '.wwwrrwww.',
-  '.bbbbbbbb.',
-  '.bb....bb.',
-];
-const INTERN_COLORS: Record<string, Color> = { h: 'hair', s: 'skin', k: 'ink', w: 'white', r: 'red', b: 'blue' };
+const ROBOT_TO_CARD: Record<string, Color> = {
+  s: 'steel', S: 'steelMid', D: 'steelDark', k: 'night', o: 'orange', O: 'hot', d: 'visorDim', x: 'red', y: 'yellow',
+  w: 'white', W: 'shirtShade', r: 'red', R: 'tieDark', b: 'paper', c: 'legs',
+};
 
-function drawIntern(bitmap: Bitmap, x: number, y: number, scale: number): void {
-  INTERN.forEach((row, ry) => {
+function drawRobot(bitmap: Bitmap, state: RobotState, x: number, y: number, scale: number): void {
+  robotRows(state).forEach((row, ry) => {
     for (let rx = 0; rx < row.length; rx++) {
-      const color = INTERN_COLORS[row[rx] as string];
+      const color = ROBOT_TO_CARD[row[rx] as string];
       if (color) bitmap.rect(x + rx * scale, y + ry * scale, scale, scale, color);
     }
   });
+}
+
+// The room every card shares: the night office, a window, a monitor's glow.
+function office(bitmap: Bitmap): void {
+  bitmap.rect(0, 0, WIDTH, HEIGHT, 'night');
+  bitmap.rect(0, 0, WIDTH, 12, 'orange');
+  bitmap.rect(0, HEIGHT - 90, WIDTH, 90, 'panel');
+  bitmap.rect(0, HEIGHT - 92, WIDTH, 3, 'line');
+  bitmap.text('AGENT INTERN', 60, 46, 6, 'orange');
 }
 
 function crc32(bytes: Uint8Array): number {
@@ -144,54 +151,107 @@ async function encodePng(bitmap: Bitmap): Promise<Uint8Array<ArrayBuffer>> {
 }
 
 const RESULT_STAMP: Record<string, { text: string; color: Color }> = {
-  shipped: { text: 'SHIPPED', color: 'green' },
+  shipped: { text: 'SHIPPED', color: 'good' },
   refused: { text: 'REFUSED', color: 'red' },
   failed: { text: 'FAILED', color: 'red' },
   'rolled-back': { text: 'ROLLED BACK', color: 'red' },
-  live: { text: 'ON SHIFT', color: 'blue' },
-  gate: { text: 'AT THE GATE', color: 'blue' },
+  live: { text: 'ON SHIFT', color: 'orange' },
+  gate: { text: 'AT THE GATE', color: 'orange' },
 };
+
+const ROBOT_FOR: Record<string, RobotState> = { shipped: 'celebrating', refused: 'refusing', failed: 'panicking', 'rolled-back': 'panicking', live: 'working', gate: 'thinking' };
+const WORK_WORD: Record<string, string> = { intern: '', rehearsal: 'REHEARSAL', team: 'TEAM CHANGE', none: 'NOT WORKED' };
 
 export const shortWallet = (wallet: string): string => `${wallet.slice(0, 4)}...${wallet.slice(-4)}`;
 
+function stampBox(bitmap: Bitmap, text: string, color: Color, x: number, y: number): void {
+  const w = text.length * 42 + 36;
+  bitmap.rect(x, y, w, 72, color);
+  bitmap.rect(x + 6, y + 6, w - 12, 60, 'night');
+  bitmap.text(text, x + 18, y + 15, 7, color);
+}
+
 export async function shipCard(shift: ShiftRow): Promise<Uint8Array<ArrayBuffer>> {
   const bitmap = new Bitmap();
-  bitmap.rect(0, 0, WIDTH, HEIGHT, 'paper');
-  for (let y = 110; y < HEIGHT; y += 52) bitmap.rect(0, y, WIDTH, 2, 'rule');
-  bitmap.rect(84, 0, 3, HEIGHT, 'red');
-
-  bitmap.text('AGENT INTERN', 120, 40, 6, 'ink');
-  bitmap.text(`SHIFT ${shift.id}`, 880, 46, 5, 'red');
-
-  const lines = wrap(shift.task_text, 26).slice(0, 4);
-  lines.forEach((line, i) => bitmap.text(line, 120, 140 + i * 80, 6, 'ink'));
-
-  const stamp = RESULT_STAMP[shift.status] ?? { text: shift.status.toUpperCase(), color: 'ink' as Color };
-  const stampW = stamp.text.length * 42 + 36;
-  const stampY = 472;
-  bitmap.rect(120, stampY, stampW, 72, stamp.color);
-  bitmap.rect(126, stampY + 6, stampW - 12, 60, 'paper');
-  bitmap.text(stamp.text, 138, stampY + 15, 7, stamp.color);
-
+  office(bitmap);
+  bitmap.text(`SHIFT ${shift.id}`, 880, 50, 5, 'dim');
+  wrap(shift.task_text, 24).slice(0, 4).forEach((line, i) => bitmap.text(line, 60, 130 + i * 74, 6, 'paper'));
+  const stamp = RESULT_STAMP[shift.status] ?? { text: shift.status.toUpperCase(), color: 'dim' as Color };
+  stampBox(bitmap, stamp.text, stamp.color, 60, 440);
   const version = shift.version ? `V${shift.version}` : '';
-  const proposer = shift.task_kind === 'intern' ? "INTERN'S CHOICE" : shift.proposer ? `BY ${shortWallet(shift.proposer)}` : '';
-  bitmap.text([version, proposer].filter(Boolean).join('   '), 120, 566, 4, 'dim');
-  if (shift.rehearsal) bitmap.text('REHEARSAL', 900, 566, 4, 'red');
-
-  drawIntern(bitmap, 960, 360, 18);
+  const proposer = shift.task_team ? 'TEAM CHANGE' : shift.task_kind === 'intern' ? "INTERN'S CHOICE" : shift.proposer ? `BY ${shortWallet(shift.proposer)}` : '';
+  bitmap.text([version, proposer].filter(Boolean).join('   '), 60, 566, 4, 'dim');
+  const work = WORK_WORD[shift.worked_by] ?? '';
+  if (work) bitmap.text(work, 760, 566, 4, 'orange');
+  drawRobot(bitmap, ROBOT_FOR[shift.status] ?? 'working', 880, 150, 13);
   return encodePng(bitmap);
+}
+
+export function shipCardPost(shift: ShiftRow, origin: string): string {
+  const task = shift.task_text.length > 110 ? `${shift.task_text.slice(0, 107)}...` : shift.task_text;
+  const url = `${origin}/shift/${shift.id}`;
+  const lead: Record<string, string> = {
+    shipped: `shift ${shift.id} shipped v${shift.version ?? ''}: "${task}"`,
+    refused: `shift ${shift.id}: refused "${task}"`,
+    failed: `shift ${shift.id} failed: "${task}"`,
+    'rolled-back': `shift ${shift.id} shipped "${task}", broke on the live site, and rolled back by itself.`,
+  };
+  const who: Record<string, string> = {
+    rehearsal: 'rehearsal: a person ran this to test the pipeline. the intern did not run.',
+    team: 'team change, made by the people running the project.',
+    none: 'nobody worked this shift.',
+  };
+  const line = lead[shift.status] ?? `shift ${shift.id} is on: "${task}"`;
+  return [line, who[shift.worked_by] ?? 'holders vote, the intern ships it.', url].join('\n');
 }
 
 export async function homeCard(): Promise<Uint8Array<ArrayBuffer>> {
   const bitmap = new Bitmap();
-  bitmap.rect(0, 0, WIDTH, HEIGHT, 'paper');
-  for (let y = 110; y < HEIGHT; y += 52) bitmap.rect(0, y, WIDTH, 2, 'rule');
-  bitmap.rect(84, 0, 3, HEIGHT, 'red');
-  bitmap.text('WE HIRED AN', 120, 100, 11, 'ink');
-  bitmap.text('AI INTERN.', 120, 200, 11, 'ink');
-  bitmap.text('HOLDERS ARE', 120, 320, 11, 'red');
-  bitmap.text('ITS BOSS.', 120, 420, 11, 'red');
-  bitmap.text('HOLDERS VOTE, THE INTERN SHIPS IT', 120, 546, 5, 'dim');
-  drawIntern(bitmap, 930, 200, 20);
+  bitmap.rect(0, 0, WIDTH, HEIGHT, 'night');
+  bitmap.rect(0, HEIGHT - 110, WIDTH, 110, 'panel');
+  bitmap.text('WE HIRED AN', 60, 90, 11, 'paper');
+  bitmap.text('AI INTERN.', 60, 190, 11, 'paper');
+  bitmap.text('HOLDERS ARE', 60, 310, 11, 'orange');
+  bitmap.text('ITS BOSS.', 60, 410, 11, 'orange');
+  bitmap.text('HOLDERS VOTE, THE INTERN SHIPS IT', 60, 556, 5, 'dim');
+  drawRobot(bitmap, 'working', 800, 100, 18);
+  return encodePng(bitmap);
+}
+
+export async function taskCard(id: number, text: string, votes: number): Promise<Uint8Array<ArrayBuffer>> {
+  const bitmap = new Bitmap();
+  office(bitmap);
+  bitmap.text(`TASK ${id}`, 880, 50, 5, 'dim');
+  bitmap.rect(60, 120, 800, 380, 'yellow');
+  bitmap.rect(60, 120, 800, 26, 'orange');
+  wrap(text, 24).slice(0, 5).forEach((line, i) => bitmap.text(line, 90, 170 + i * 62, 5, 'ink'));
+  bitmap.text(`${votes} ${votes === 1 ? 'VOTE' : 'VOTES'}`, 60, 566, 4, 'orange');
+  drawRobot(bitmap, 'thinking', 910, 180, 12);
+  return encodePng(bitmap);
+}
+
+export async function bossCard(wallet: string, rank: string, shipped: number, votes: number): Promise<Uint8Array<ArrayBuffer>> {
+  const bitmap = new Bitmap();
+  office(bitmap);
+  bitmap.rect(120, 130, 640, 380, 'paper');
+  bitmap.rect(120, 130, 640, 70, 'red');
+  bitmap.text('ID BADGE', 150, 148, 6, 'paper');
+  bitmap.text(rank.toUpperCase(), 150, 240, 8, 'ink');
+  bitmap.text(shortWallet(wallet), 150, 330, 5, 'ink');
+  bitmap.text(`${shipped} SHIPPED  ${votes} VOTES`, 150, 410, 4, 'steelDark');
+  bitmap.text('COSMETIC. NO VALUE.', 150, 460, 3, 'steelDark');
+  drawRobot(bitmap, 'celebrating', 850, 170, 13);
+  return encodePng(bitmap);
+}
+
+export async function dailyCard(day: number, best: number | null): Promise<Uint8Array<ArrayBuffer>> {
+  const bitmap = new Bitmap();
+  office(bitmap);
+  bitmap.text('LAST DAY', 60, 150, 11, 'paper');
+  bitmap.text('AT THE OFFICE', 60, 250, 8, 'paper');
+  bitmap.text(`DAILY SHIFT #${day}`, 60, 360, 7, 'orange');
+  bitmap.text(best === null ? 'NOBODY HAS CLOCKED IN' : `TOP SCORE ${best}`, 60, 450, 5, 'dim');
+  bitmap.text('SAME OFFICE FOR EVERYONE', 60, 566, 4, 'dim');
+  drawRobot(bitmap, 'working', 850, 150, 13);
   return encodePng(bitmap);
 }

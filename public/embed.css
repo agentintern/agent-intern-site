@@ -1,0 +1,6 @@
+body { margin: 0; background: #0b1020; color: #eae6dc; font: 14px/1.35 system-ui, sans-serif; }
+.embed { display: flex; align-items: center; gap: 12px; padding: 10px 12px; color: inherit; text-decoration: none; }
+.robot { width: 52px; height: 60px; flex: none; }
+span { display: grid; }
+i { font-style: normal; color: #ff9a3c; }
+small { color: #aeb8c8; }
