@@ -236,3 +236,10 @@ knowing the login worked. It uses the same container arguments as a shift, with 
 key must not reach them, and an exception for admins would cover the key, as it did once on `main`. A person turns the
 ruleset off for a moment to open a maintenance branch. It covers updates as well as creation, or the old branches would
 still be open. The push ruleset the brief asked for would have had the same flaw, if GitHub had allowed it.
+
+**Deny rules got more entries, and they're not what holds.** After shift 8, `npx` and the rest are denied in the image and in
+the repo's settings, and the intern is told to stop when blocked. Those match command text, so a chain of allowed commands
+can still get to the same place. The real limits stay the empty container, the proxy, `shift:finish` and the gate.
+
+**The container test clones the game outside the container.** The container can't reach GitHub by design, so the clone is
+made on the host and mounted, the way a shift's workspace is. `npm ci` itself runs inside, through the proxy.

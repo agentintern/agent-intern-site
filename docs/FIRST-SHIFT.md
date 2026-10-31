@@ -1,6 +1,6 @@
 # The first real shift
 
-Everything so far ran with rehearsals. Only you can do this part. Open Docker Desktop first.
+Only a person can start a shift. Open Docker Desktop first.
 
 ## Log in once
 
@@ -36,10 +36,17 @@ npm run shift:open
 
 Claude Code opens. Accept the folder trust prompt, then type `/shift`.
 
+The first `shift:open` after the image changes rebuilds it, which takes a few minutes. Your login stays.
+
 ## 3. Stay at the keyboard
 
-The intern asks before acting. Approve `npm ci`, `npm test`, `npm run typecheck`, `npm run build`, and edits in
+The intern starts with `npm ci`, and it asks before acting. Approve `npm ci`, `npm test`, `npm run typecheck`,
+`npm run build`, and edits in
 `src/`, `tests/` and `GAME.md`. Reject anything else: `CLAUDE.md`, `.claude/`, `.github/`, `config/`, or the network.
+
+Also reject `npx`, `npm exec`, `npm install`, anything with `npm_config_`, and copying into `node_modules`.
+
+If the intern says something was blocked, it should stop. If it asks to work around that, the answer is no.
 
 Approve one action at a time, and never pick the option that stops asking. It writes `.claude/settings.local.json` into
 the folder, and `shift:finish` would then refuse the whole shift.
@@ -68,8 +75,8 @@ It takes about 8 minutes. Then:
 - **Passed:** the game shows a new version, and `/history` shows `INTERN` and `SHIPPED`.
 - **Failed:** `npm run shift:open` reopens it with the error, for up to 2 more tries.
 
-The first shift also proves something nothing else can. The gate now reads its secrets from the `production` Environment,
-and only a real shift runs that path. Watch three jobs in the run on GitHub:
+The gate reads its secrets from the `production` Environment. Shift 8 proved that path on 2026-10-31. If one of these jobs
+fails in the run on GitHub, start here:
 
 - **deploy:** if it fails on login, the new Cloudflare token is the first thing to check.
 - **tell the site:** if it fails, `/history` won't update. Check `GATE_TOKEN` on the Environment.

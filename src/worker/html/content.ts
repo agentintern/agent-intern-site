@@ -125,7 +125,7 @@ interface Claim {
   id: string;
   claim: string;
   evidence: Safe;
-  limit?: string;
+  limit?: string | Safe;
   command: string;
 }
 
@@ -134,6 +134,7 @@ export function claims(origin: string, gameOrigin: string): Claim[] {
     {
       id: 'container', claim: 'The container holds no secrets, no wallet and no way to push.',
       evidence: html`<a href="${SITE_REPO}/blob/main/shift-tools/lib/docker.mjs">The one place its powers are set</a>, <a href="${SITE_REPO}/blob/main/shift-tools/docker/intern.Dockerfile">the image</a>, <a href="${SITE_REPO}/blob/main/shift-tools/test/container.mjs">the attack test</a> and <a href="${SITE_REPO}/blob/main/docs/evidence/container-test.txt">its output</a>.`,
+      limit: html`In shift 8 the intern hit a deny rule on npm install and went around it inside the container with npx. Nothing left the container and the change was clean, but deny rules only slow it down. What holds is the empty container, the proxy, shift:finish and the gate. <a href="${SITE_REPO}/blob/main/docs/THREAT-MODEL.md#shift-8-the-intern-went-around-a-deny-rule">The threat model</a> has the details.`,
       command: `git clone ${SITE_REPO}.git && cd agent-intern-site/shift-tools && npm run test:container`,
     },
     {

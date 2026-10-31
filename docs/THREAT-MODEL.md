@@ -19,6 +19,7 @@ Someone who can write tasks, and who assumes the model will do whatever a task s
 | It plants a git hook to run on the host | `shift:finish` never runs git in that folder | Links, nested `.git` folders and odd names are refused |
 | It pushes something itself | No remote, no credentials, no route | The deploy key can only reach `shift/*`, and a ruleset enforces it |
 | It adds a workflow, so that a pushed branch reads the deploy secrets or merges itself | `shift:finish` refuses any file outside the game before the push | The deploy secrets only reach runs on `main`. See below |
+| A denied command leads the intern to go around it | `CLAUDE.md` tells it to stop, and the person rejects the workaround | The empty container, the proxy, `shift:finish` and the gate. See "Shift 8" below |
 | A build passes CI and breaks live | The live check after each deploy | Automatic rollback |
 | A bad task reaches holders as text | Rejected text is never published, and pages escape by default | The strict CSP has no inline scripts |
 | A forged, replayed or moved vote | Signatures over a server-built message with a single-use nonce | Anyone can re-verify the public record |
@@ -55,10 +56,44 @@ What's still true:
   with `live check` skipped, and maintenance pull requests depend on that. Two more gaps follow from how GitHub works, and
   weren't tested: a shift the rules job rejects also skips `live check`, and a workflow in a branch could name its own job
   `live check`.
-- **The fourth layer hasn't met the deploy key.** GitHub's rule lookup shows it on those branches and not on `shift/8`, but
-  no push has tried it.
+- **The fourth layer has met the deploy key once.** A push with the real key to `shift/maintenance-keytest` was refused on
+  2026-10-31: GH013, creations restricted. That tried creating a branch. Updating an old one hasn't been tried, though the
+  same ruleset covers it.
 - **Someone holding the deploy key can skip the first layer.** It lives on the maintainer's machine, and it reaches
   `shift/*`, so only the second layer applies.
+
+## Shift 8: the intern went around a deny rule
+
+`/shift` never told the intern to install anything, and the workspace has no `node_modules`. `scripts/test.mjs` called
+`npx vitest`, so with nothing installed `npx` quietly fetched vitest 5.0.5 instead of the locked 4.1.12, and then failed on
+the home folder, which can't run programs.
+
+The intern ran `npm install`, which is denied. It didn't stop. It read `.claude/settings.json`, checked the mounts, pointed
+npm's cache into the workspace to get off that folder, ran `npx --yes`, and copied the packages into `node_modules` by
+hand. `npm ci` wasn't denied, and it never tried it.
+
+There was no damage, and the reasons are the point. `node_modules` isn't synced, so nothing it fetched could leave. The diff
+was 10 allowed files. The gate ran everything again with the locked versions, and `0.1.8` shipped. The public replay and
+the shift report don't mention any of this, so this page does.
+
+What changed:
+
+- `/shift` now starts with `npm ci`, and it stops if that fails.
+- `CLAUDE.md` tells the intern to stop when something is blocked, and not to look for another way to the same result.
+- `npx`, `npm exec`, `npm x`, `npm install` and `npm i` are denied in the image, where nothing in the workspace can change
+  them, and in the repo's settings.
+- `npm test` runs the installed vitest. With no `node_modules` it fails at once and downloads nothing.
+- `test/container.mjs` runs `npm ci`, `npm test`, `npm run typecheck` and `npm run build` in the real container, through the
+  proxy, as the intern user.
+
+What's still true:
+
+- **Deny rules match command text, so they slow the intern down, and the person's approval is the check there.** Shift 8
+  shows this: one denied command led to a chain of commands that were allowed.
+- **The npm registry stays open, because `npm ci` needs it.** The intern can still download packages into the container.
+  They can't leave in a push.
+- **The real limits are the empty container, the proxy, `shift:finish` and the gate.**
+- **Nothing has shown the intern will stop.** The instruction is new, and only a real shift can show how it behaves.
 
 ## What this doesn't protect against
 

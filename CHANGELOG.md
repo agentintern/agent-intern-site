@@ -2,6 +2,13 @@
 
 The game's versions are at https://agentintern.online/changelog. This file covers the site.
 
+## Stop when blocked, 2026-10-31
+
+- Added to /proof's container claim: in shift 8 the intern went around a deny rule on npm install, and deny rules only slow
+  it down.
+- Added shift 8 to the threat model.
+- Said in the first shift guide what to reject, and that the intern starts with `npm ci`.
+
 ## Sealing the shift push, 2026-10-31
 
 - Added to /proof's gate limits: deploy secrets only reach runs on main, shift:finish refuses files outside the game,
