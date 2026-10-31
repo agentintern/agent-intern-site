@@ -247,8 +247,8 @@ export async function bossCard(wallet: string, rank: string, shipped: number, vo
 export async function promotionCard(title: string, shipped: number): Promise<Uint8Array<ArrayBuffer>> {
   const bitmap = new Bitmap();
   office(bitmap);
-  bitmap.text('THE INTERN', 60, 150, 11, 'paper');
-  bitmap.text(`NOW ${title.toUpperCase()}`, 60, 270, 10, 'orange');
+  bitmap.text('JOB TITLE', 60, 150, 11, 'paper');
+  bitmap.text(title.toUpperCase(), 60, 270, 10, 'orange');
   bitmap.text(`${shipped} REAL SHIFTS SHIPPED`, 60, 400, 5, 'dim');
   bitmap.text('REHEARSALS DO NOT COUNT', 60, 566, 4, 'dim');
   drawRobot(bitmap, 'celebrating', 850, 150, 13);

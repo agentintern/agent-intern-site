@@ -350,6 +350,8 @@ export async function handle(request: Request, env: Env, ctx: Ctx): Promise<Resp
   const wantsPage = !url.pathname.startsWith('/api/') && url.pathname !== '/mcp' && request.method === 'GET';
   try {
     const origin = siteOrigin(env);
+    // MCP clients try GET for a stream. This endpoint has none, and 405 is how a server says so.
+    if (url.pathname === '/mcp' && request.method !== 'POST') throw new HttpError(405, 'Method not allowed.');
     if (request.method === 'GET' || request.method === 'HEAD') return await getRoute(request, env, ctx, url, origin);
     if (request.method === 'POST') return await postRoute(request, env, ctx, url, origin);
     throw new HttpError(405, 'Method not allowed.');

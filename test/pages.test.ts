@@ -169,6 +169,7 @@ describe('machines', () => {
 
   it('serves a read-only MCP endpoint with no way to write', async () => {
     const rpc = (body: object): Promise<{ status: number; body: any }> => h.call('/mcp', { body, origin: null });
+    expect((await h.call('/mcp')).status).toBe(405);
     expect((await rpc({ jsonrpc: '2.0', id: 1, method: 'initialize' })).body.result.serverInfo.name).toBe('agent-intern');
     const tools = (await rpc({ jsonrpc: '2.0', id: 2, method: 'tools/list' })).body.result.tools.map((t: { name: string }) => t.name);
     expect(tools).toEqual(['current_round', 'queue', 'last_shift', 'how_to_verify']);
