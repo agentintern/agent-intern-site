@@ -26,6 +26,9 @@ export function swap(next: Document): void {
   const scene = document.getElementById('scene');
   const nextScene = next.getElementById('scene');
   if (scene && nextScene) Object.assign(scene.dataset, nextScene.dataset);
+  const art = document.getElementById('stage-art');
+  const nextArt = next.getElementById('stage-art');
+  if (art && nextArt) art.dataset.state = nextArt.dataset.state;
   for (const incoming of next.querySelectorAll<HTMLElement>('[data-live]')) {
     const present = incoming.id ? document.getElementById(incoming.id) : null;
     if (!present || present.isEqualNode(incoming)) continue;

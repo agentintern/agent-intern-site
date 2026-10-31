@@ -1,3 +1,4 @@
+import GAME_SHOT from '../../../config/game-shot.json';
 import { robotSvg, type RobotState } from '../../shared/robot';
 import type { ProposalRow } from '../board';
 import { threshold } from '../config';
@@ -59,6 +60,11 @@ function clockText(closesAt: number): string {
   const pad = (n: number): string => String(n).padStart(2, '0');
   const total = Math.floor(Math.max(0, closesAt - Date.now()) / 1000);
   return `${pad(Math.floor(total / 3600))}:${pad(Math.floor(total / 60) % 60)}:${pad(total % 60)}`;
+}
+
+// The 3D office's backdrop. The poster and the links around it are all that's needed if the 3D never starts.
+export function officeArt(state: RobotState): Safe {
+  return html`<div class="story-art" id="stage-art" aria-hidden="true" data-state="${state}" data-shot="/img/game-shot.webp" data-shot-version="${GAME_SHOT.version}"><img class="stage-poster" src="/img/robot-poster.webp" width="1600" height="1000" alt="" fetchpriority="high"><i class="guide guide-side"></i><i class="guide guide-mid"></i></div>`;
 }
 
 // The state of the project in one line, from the same data as the header. Links to the live page.

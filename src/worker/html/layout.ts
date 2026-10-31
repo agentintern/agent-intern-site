@@ -51,7 +51,7 @@ function mintChip(): Safe | null {
 export function renderPage(env: Env, page: Page, state: { label: string; on: boolean; paused: string | null }): string {
   const origin = siteOrigin(env);
   const url = `${origin}${page.path === '/' ? '' : page.path}` || origin;
-  const image = page.image ?? `${origin}/api/card.png`;
+  const image = page.image ?? `${origin}/img/share-card.jpg`;
   const nav = NAV.map(([href, label]) =>
     html`<li><a href="${href}" ${raw(current(href, page.path) ? 'aria-current="page"' : '')}>${label}</a></li>`);
   const bottom = NAV.map(([href, label, icon]) =>

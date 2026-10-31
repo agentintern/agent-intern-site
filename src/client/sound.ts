@@ -17,6 +17,34 @@ function blip(freq: number, seconds: number, type: OscillatorType, gain: number,
   osc.stop(audio.currentTime + seconds);
 }
 
+const on = (): boolean => store('sound') === 'on' && audio !== null;
+
+// The 3D office's sounds. None of them play until a person has switched sound on.
+export function keyClick(): void {
+  if (on()) blip(1200 + Math.random() * 500, 0.018, 'square', 0.012);
+}
+
+export function stampThud(): void {
+  if (on()) blip(120, 0.16, 'sawtooth', 0.14, 42);
+}
+
+let humming: OscillatorNode | null = null;
+
+export function hum(wanted: boolean): void {
+  if (wanted && on() && audio && !humming) {
+    const amp = audio.createGain();
+    amp.gain.value = 0.006;
+    humming = audio.createOscillator();
+    humming.type = 'sine';
+    humming.frequency.value = 58;
+    humming.connect(amp).connect(audio.destination);
+    humming.start();
+  } else if ((!wanted || !on()) && humming) {
+    humming.stop();
+    humming = null;
+  }
+}
+
 export function startSound(): void {
   const toggle = byId<HTMLButtonElement>('sound-toggle');
   if (!toggle) return;

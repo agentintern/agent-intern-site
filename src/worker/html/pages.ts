@@ -11,37 +11,85 @@ import { getShift, listShifts, WORK_LABELS } from '../shifts';
 import { changelog, liveFeed, shiftDetail, status as statusData } from '../status';
 import { html, shortAddress, when, type Safe } from './core';
 import type { Page } from './layout';
-import { inTray, passLine, punchClock, robotFor, robotPanel, shiftLine, shiftRow, stamp, STATE_WORDS, stateChip, whiteboard, workLabel } from './parts';
+import GAME_SHOT from '../../../config/game-shot.json';
+import { inTray, officeArt, passLine, punchClock, robotFor, robotPanel, shiftLine, shiftRow, stamp, STATE_WORDS, stateChip, whiteboard, workLabel } from './parts';
 
 const title = (text: string, sub?: string): Safe => html`<header class="page-head"><h1>${text}</h1>${sub ? html`<p class="lede">${sub}</p>` : ''}</header>`;
 
 export type Rendered = Page & { state: ReturnType<typeof shiftLine> };
 
+const PRACTICE_SAMPLES = ['Add a sleepy cat that blocks the hallway', 'Make the boss slip on a banana peel'];
+
+const CHAPTERS: [string, string][] = [['clock-in', 'CLOCK IN'], ['the-job', 'THE JOB'], ['the-game', 'THE GAME'], ['the-record', 'THE RECORD']];
+
 export async function homePage(env: Env): Promise<Rendered> {
   const o = await overview(env);
   const state = robotFor(o.open, o.last, o.pause.paused);
+  const line = shiftLine(o);
+  const { counts } = o;
+  const lastResult = o.last ? `shift ${o.last.id} ${o.last.status.replace('-', ' ')}` : 'no shifts yet';
   return {
     path: '/',
     title: 'Agent Intern',
     description: 'We hired an AI intern. Holders are its boss. Holders vote, the intern ships it, and a person starts every shift.',
     refresh: 45,
-    state: shiftLine(o),
+    state: line,
     stage: html`
-<section class="stage" aria-labelledby="hero-title">
-<div class="stage-art" id="stage-art" aria-hidden="true"><img class="stage-poster" src="/img/robot-poster.webp" width="1600" height="1000" alt="" fetchpriority="high"></div>
+<div class="story" id="story">
+${officeArt(state)}
+<nav class="rail" aria-label="Sections"><ul>${CHAPTERS.map(([id, label]) => html`<li><a href="#${id}"><span>${label}</span><i aria-hidden="true"></i></a></li>`)}</ul></nav>
+<section class="chapter stage" id="clock-in" data-chapter="0" aria-labelledby="hero-title">
 <div class="stage-text">
-${stateChip(shiftLine(o), o.round.closes_at)}
-<h1 id="hero-title">We hired an AI intern. <em>Holders are its boss.</em></h1>
+${stateChip(line, o.round.closes_at)}
+<h1 id="hero-title"><span class="head-line">We hired an AI intern.</span> <em class="head-line">Holders are its boss.</em></h1>
 <p class="sub">It builds a browser game in public. Holders vote, the intern ships it. A person starts every shift, and the bad days stay on the page.</p>
 <div class="btn-row"><a class="btn big" href="/play">Play the game</a><a class="btn ghost" href="/board">Vote on the next task</a><a class="btn ghost" href="/proof">Check the claims</a></div>
 </div>
-</section>`,
-    body: html`
-<section class="office-view" aria-label="The office tonight">
+<a class="scroll-cue" href="#the-job"><span>Scroll</span><i aria-hidden="true"></i></a>
+</section>
+<section class="chapter" id="the-job" data-chapter="1" aria-labelledby="job-title">
+<div class="chapter-panel rise">
+<h2 id="job-title">The job</h2>
+<div data-live="clock" id="job-clock">${punchClock(o.round.closes_at)}</div>
+<div class="strip-frame"><ol class="steps strip" id="strip">
+<li><b>Suggest</b> Holders pin tasks to the board.</li>
+<li><b>Screen</b> Rules, then a small model with no tools.</li>
+<li><b>Vote</b> One wallet, one vote, until ${SITE.rounds.closesUtc.join(' and ')} UTC.</li>
+<li><b>Shift</b> A person starts it and stays at the keyboard.</li>
+<li><b>Gate</b> Tests decide. Bad days stay public.</li>
+</ol></div>
+<div class="task-box"><span class="task-tag">example</span><p class="task-line" id="task-type" data-samples="${JSON.stringify(PRACTICE_SAMPLES)}">${PRACTICE_SAMPLES[0]}</p><a href="/practice">Try it with no wallet</a></div>
+<p><a href="/how">The full rules</a></p>
+</div>
+</section>
+<section class="chapter" id="the-game" data-chapter="2" aria-labelledby="game-title">
+<div class="chapter-panel rise">
+<h2 id="game-title">The game</h2>
+<figure class="game-shot"><img src="/img/game-shot.webp" width="960" height="640" alt="The title screen of Last Day at the Office, version ${GAME_SHOT.version}" loading="lazy"><figcaption>Screenshot of v${GAME_SHOT.version}</figcaption></figure>
+<div data-live="last-shipped" id="last-shipped">${o.lastShipped ? html`<p>Last shipped: <a href="/shift/${o.lastShipped.id}">shift ${o.lastShipped.id}</a>, ${o.lastShipped.task}</p><p class="marks">${workLabel(o.lastShipped.workedBy)}</p>` : html`<p class="empty">Nothing has shipped yet.</p>`}</div>
+<p><a class="btn big" href="/play">Play the game</a></p>
 <div class="scene" id="scene" data-state="${state}" data-level="${o.level.index}" data-on="${o.open ? '1' : '0'}" data-closes="${o.round.closes_at}" data-commit="${o.lastCommit ? `${o.lastCommit.sha.slice(0, 7)} ${o.lastCommit.message}` : 'no commits yet'}">
 <div class="scene-fallback">${robotPanel(state, `The robot intern, ${state}`)}</div>
 </div>
+</div>
 </section>
+<section class="chapter" id="the-record" data-chapter="3" aria-labelledby="record-title">
+<div class="chapter-panel rise">
+<h2 id="record-title">The record</h2>
+<div id="record-facts" data-live="record" data-shipped="${counts.shipped}" data-refused="${counts.refused}" data-failed="${counts.failed}" data-rolled="${counts.rolledBack}" data-last="${lastResult}">
+<ul class="drawer-list">
+<li><span>Shipped</span><b data-count="${counts.shipped}">${counts.shipped}</b></li>
+<li><span>Refused</span><b data-count="${counts.refused}">${counts.refused}</b></li>
+<li><span>Failed</span><b data-count="${counts.failed}">${counts.failed}</b></li>
+<li><span>Rolled back</span><b data-count="${counts.rolledBack}">${counts.rolledBack}</b></li>
+</ul>
+<p class="muted">Every shift so far, labeled by who did the work. Real intern shifts: ${counts.intern}.</p>
+</div>
+<div class="btn-row"><a class="btn ghost" href="/history">History</a><a class="btn ghost" href="/proof">Proof</a></div>
+</div>
+</section>
+</div>`,
+    body: html`
 <div data-live="home" id="home-live">
 <div class="office-grid">
 <section class="desk-card" aria-labelledby="now-title">
@@ -73,18 +121,7 @@ ${o.last ? html`<p><a href="/shift/${o.last.id}">Shift ${o.last.id}</a>: ${o.las
 <p><a href="/history">Open the filing cabinet</a></p>
 </section>
 </div>
-</div>
-<section class="steps-card" aria-labelledby="how-title">
-<h2 id="how-title">How the day goes</h2>
-<ol class="steps">
-<li><b>Suggest</b> Holders pin tasks to the board.</li>
-<li><b>Screen</b> Rules, then a small model with no tools.</li>
-<li><b>Vote</b> One wallet, one vote, until ${SITE.rounds.closesUtc.join(' and ')} UTC.</li>
-<li><b>Shift</b> A person starts it and stays at the keyboard.</li>
-<li><b>Gate</b> Tests decide. Bad days stay public.</li>
-</ol>
-<p><a href="/how">The full rules</a></p>
-</section>`,
+</div>`,
   };
 }
 
@@ -230,7 +267,7 @@ export async function practicePage(env: Env): Promise<Rendered> {
 ${title('Practice board', 'No wallet. Your task goes through the real screening, and everything else stays in this browser. It never reaches the real board or the queue.')}
 <div class="practice-flag" role="note"><b>PRACTICE</b> Nothing here is a real task or a real vote. The sample tasks are examples.</div>
 <div class="office-grid wide-first">
-<section class="tray-card" aria-labelledby="ptray-title"><h2 id="ptray-title">Practice in-tray</h2><ol class="tray" id="practice-list"><li class="sheet-note">Add a sleepy cat that blocks the hallway</li><li class="sheet-note">Make the boss slip on a banana peel</li></ol>
+<section class="tray-card" aria-labelledby="ptray-title"><h2 id="ptray-title">Practice in-tray</h2><ol class="tray" id="practice-list">${PRACTICE_SAMPLES.map((text) => html`<li class="sheet-note">${text}</li>`)}</ol>
 <div class="btn-row"><button class="btn ghost" type="button" id="practice-close">Close the practice round</button></div><p id="practice-result" role="status"></p></section>
 <section class="paper" aria-labelledby="ppin-title"><h2 id="ppin-title">Pin a practice task</h2>
 <form id="practice-form"><div class="field"><label for="practice-text">What should the intern change?</label><textarea id="practice-text" rows="3" maxlength="120" required></textarea></div>
@@ -252,6 +289,7 @@ export async function livePage(env: Env): Promise<Rendered> {
     state: shiftLine(o),
     body: html`
 ${title('Live', 'A person starts every shift. When one is open, this page follows it. When none is, it says so.')}
+<div class="live-stage">${officeArt(robot)}</div>
 <div data-live="live" id="live-box">
 <div class="office-grid wide-first">
 <section class="crt big" aria-labelledby="feed-title">
@@ -548,6 +586,6 @@ export function raw404(path: string): Page {
     description: 'That page is not in the filing cabinet.',
     status: 404,
     noindex: true,
-    body: html`<section class="empty-desk">${robotPanel('thinking', 'The robot intern, looking confused')}<h1>This desk is empty</h1><p class="lede">Whoever worked here took the stapler and left no forwarding address. <a href="/">Back to the office</a>.</p></section>`,
+    body: html`<section class="empty-desk"><img class="shrug" src="/img/robot-shrug.webp" width="800" height="800" alt="The robot intern, shrugging"><h1>This desk is empty</h1><p class="lede">Whoever worked here took the stapler and left no forwarding address. <a href="/">Back to the office</a>.</p></section>`,
   };
 }

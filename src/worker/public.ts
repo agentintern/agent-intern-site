@@ -70,6 +70,7 @@ export interface Overview {
   queue: QueueTask[];
   counts: Counts;
   version: string | null;
+  lastShipped: { id: number; task: string; workedBy: string } | null;
   level: ReturnType<typeof promotionLevel>;
   founding: number;
 }
@@ -84,8 +85,9 @@ export async function overview(env: Env): Promise<Overview> {
     shiftCounts(env),
     listShifts(env, 1),
     env.DB.prepare(
-      `SELECT id, commit_sha, summary, version FROM shifts WHERE commit_sha IS NOT NULL AND status = 'shipped' ORDER BY id DESC LIMIT 1`,
-    ).first<{ id: number; commit_sha: string; summary: string | null; version: string | null }>(),
+      `SELECT s.id, s.commit_sha, s.summary, s.version, s.worked_by, t.text AS task FROM shifts s JOIN tasks t ON t.id = s.task_id
+       WHERE s.commit_sha IS NOT NULL AND s.status = 'shipped' ORDER BY s.id DESC LIMIT 1`,
+    ).first<{ id: number; commit_sha: string; summary: string | null; version: string | null; worked_by: string; task: string }>(),
     testMode() ? null : env.DB.prepare('SELECT COUNT(*) AS n FROM founding_bosses').first<{ n: number }>(),
   ]);
   return {
@@ -94,6 +96,7 @@ export async function overview(env: Env): Promise<Overview> {
     open,
     last: recent[0] ?? null,
     lastCommit: commit ? { sha: commit.commit_sha, message: `Shift ${commit.id}: ${commit.summary ?? 'shipped'}` } : null,
+    lastShipped: commit ? { id: commit.id, task: commit.task, workedBy: commit.worked_by } : null,
     proposals,
     queue: queue as QueueTask[],
     counts,

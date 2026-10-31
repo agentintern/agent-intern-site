@@ -5,21 +5,63 @@ import { join, resolve } from 'node:path';
 import { build } from 'esbuild';
 import { chromium } from 'playwright';
 
-// Renders the first-paint poster from the same scene the page runs, so the two can't drift apart. It needs a real GPU.
-// Run it by hand after a change to the scene: node scripts/render-poster.mjs
-const WIDTH = 1600;
-const HEIGHT = 1000;
-const QUALITY = 0.92;
+// Renders the pictures of the robot from the same scene the page runs, so they can't drift apart: the first-paint poster,
+// the 404 still and the share card. It needs a real GPU. Run it by hand after a change to the scene: npm run poster
 const work = mkdtempSync(join(tmpdir(), 'poster-'));
 const entry = join(work, 'entry.ts');
 writeFileSync(entry, `
 import { startOffice } from '${resolve('src/client/office/index')}';
-window.render = async () => {
-  const office = await startOffice(document.getElementById('host'), { pixelRatio: 1 });
-  office.draw(400);
-  office.draw(416);
-  return office.canvas.toDataURL('image/webp', ${QUALITY});
+import { GLYPHS } from '${resolve('src/shared/font')}';
+
+const settle = (office, ms) => { for (let i = 0; i < ms / 16; i++) office.draw(400 + i * 16); };
+
+function bitmap(ctx, value, x, y, scale, color) {
+  ctx.fillStyle = color;
+  let at = x;
+  for (const char of value.toUpperCase()) {
+    (GLYPHS[char] ?? []).forEach((bits, row) => {
+      for (let col = 0; col < 5; col++) if (bits & (1 << (4 - col))) ctx.fillRect(at + col * scale, y + row * scale, scale, scale);
+    });
+    at += 6 * scale;
+  }
+}
+
+const views = {
+  // Asleep, because that's the real state whenever no shift is open.
+  async poster(host) {
+    const office = await startOffice(host, { pixelRatio: 1, opaque: true, fixed: true });
+    office.still('asleep');
+    settle(office, 3000);
+    return office.canvas.toDataURL('image/webp', 0.92);
+  },
+  async shrug(host) {
+    const office = await startOffice(host, { pixelRatio: 1, opaque: true, fixed: true });
+    office.still('shrug');
+    settle(office, 500);
+    office.look(0, 5.5, 8.6, 0, 5.05, 0, 26);
+    office.draw(900);
+    return office.canvas.toDataURL('image/webp', 0.9);
+  },
+  async card(host) {
+    const office = await startOffice(host, { pixelRatio: 1, opaque: true, fixed: true });
+    office.still('rest');
+    settle(office, 500);
+    office.look(-1.9, 6.0, 8.6, -1.42, 5.55, 0, 23);
+    office.draw(900);
+    const card = document.createElement('canvas');
+    card.width = office.canvas.width;
+    card.height = office.canvas.height;
+    const ctx = card.getContext('2d');
+    ctx.drawImage(office.canvas, 0, 0);
+    bitmap(ctx, 'WE HIRED AN', 56, 196, 7, '#eae6dc');
+    bitmap(ctx, 'AI INTERN.', 56, 262, 7, '#eae6dc');
+    bitmap(ctx, 'HOLDERS ARE', 56, 340, 7, '#ff9a3c');
+    bitmap(ctx, 'ITS BOSS.', 56, 406, 7, '#ff9a3c');
+    bitmap(ctx, 'AGENTINTERN.ONLINE', 56, 520, 3, '#aeb8c8');
+    return card.toDataURL('image/jpeg', 0.9);
+  },
 };
+window.render = (name) => views[name](document.getElementById('host'));
 `);
 await build({ entryPoints: [entry], bundle: true, format: 'esm', outfile: join(work, 'poster.js'), target: 'es2022', logLevel: 'error' });
 const script = readFileSync(join(work, 'poster.js'));
@@ -30,17 +72,21 @@ const server = createServer((request, response) => {
     return;
   }
   response.setHeader('content-type', 'text/html');
-  response.end('<!doctype html><style>body{margin:0}#host{width:100vw;height:100vh}</style><div id="host"></div><script type="module" src="/poster.js"></script>');
+  response.end('<!doctype html><style>body{margin:0}#host{width:100vw;height:100vh}canvas{display:block}</style><div id="host"></div><script type="module" src="/poster.js"></script>');
 }).listen(0);
 const browser = await chromium.launch({ args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
-const page = await browser.newPage({ viewport: { width: WIDTH, height: HEIGHT } });
-await page.goto(`http://localhost:${server.address().port}/`);
-await page.waitForFunction(() => 'render' in window);
-const dataUrl = await page.evaluate(() => window.render());
+for (const [name, file, width, height] of [['poster', 'robot-poster.webp', 1600, 1000], ['shrug', 'robot-shrug.webp', 800, 800], ['card', 'share-card.jpg', 1200, 630]]) {
+  const page = await browser.newPage({ viewport: { width, height } });
+  page.on('pageerror', (error) => console.log(String(error)));
+  await page.goto(`http://localhost:${server.address().port}/`);
+  await page.waitForFunction(() => 'render' in window);
+  const dataUrl = await page.evaluate((view) => window.render(view), name);
+  await page.close();
+  const bytes = Buffer.from(dataUrl.split(',')[1], 'base64');
+  if (!/^data:image\/(webp|jpeg)/.test(dataUrl)) throw new Error(`the browser did not encode ${file}`);
+  writeFileSync(`public/img/${file}`, bytes);
+  console.log(`public/img/${file}, ${Math.round(bytes.length / 1024)} KB`);
+}
 await browser.close();
 server.close();
 rmSync(work, { recursive: true, force: true });
-if (!dataUrl.startsWith('data:image/webp')) throw new Error('the browser did not encode a WebP');
-const bytes = Buffer.from(dataUrl.split(',')[1], 'base64');
-writeFileSync('public/img/robot-poster.webp', bytes);
-console.log(`public/img/robot-poster.webp, ${Math.round(bytes.length / 1024)} KB`);
