@@ -20,8 +20,8 @@ function part(geometry: BufferGeometry, material: Material, shadow = true): Mesh
 const block = (w: number, h: number, d: number, r: number): BufferGeometry => loft(roundedProfile(h / 2, w / 2, d / 2, r, 9, 3), 40);
 
 // Dents are pushed into the sheet metal itself, so the lamp catches them.
-function dentedBox(w: number, h: number, d: number, dents: [number, number, number, number][]): BufferGeometry {
-  const geometry = new BoxGeometry(w, h, d, 56, 72, 18);
+function dentedBox(w: number, h: number, d: number, dents: [number, number, number, number][], grid: [number, number] = [28, 34]): BufferGeometry {
+  const geometry = new BoxGeometry(w, h, d, grid[0], grid[1], 1);
   const position = geometry.getAttribute('position') as BufferAttribute;
   for (let i = 0; i < position.count; i++) {
     const x = position.getX(i);
@@ -66,7 +66,8 @@ const MAX_FOLDERS = 16;
 function buildDrawer(s: Surfaces, w: number, h: number, seed: number, labelled: boolean): Drawer {
   const group = new Group();
   const lean = (seed % 3) * 0.006;
-  const front = part(dentedBox(w, h, 0.12, [[(seed % 5) * 0.2 - 0.4, (seed % 2) * 0.1 - 0.06, 0.22, 0.03], [0.7 - seed * 0.12, 0.1, 0.14, 0.022]]), s.cabinet);
+  const front = part(dentedBox(w, h, 0.12, [[(seed % 5) * 0.2 - 0.4, (seed % 2) * 0.1 - 0.06, 0.22, 0.03], [0.7 - seed * 0.12, 0.1, 0.14, 0.022]], [24, 10]), s.cabinet);
+  front.castShadow = false;
   front.position.z = -0.035;
   group.add(front);
   group.rotation.x = lean;
@@ -76,7 +77,7 @@ function buildDrawer(s: Surfaces, w: number, h: number, seed: number, labelled: 
     { at: new Vector3(0, -0.075, 0.1), rx: 0.022 },
     { at: new Vector3(0.22, -0.07, 0.085), rx: 0.018 },
     { at: new Vector3(0.24, -0.07, 0.03), rx: 0.016 },
-  ], 10, 5), s.steel);
+  ], 8, 4), s.steel, false);
   pull.position.y = -h * 0.18;
   group.add(pull);
   const holder = part(plate(roundedRect(1.02, 0.21, 0.016, 2), () => 0.025, { lift: 0.012, edge: 0.012, rings: 2 }), s.steel, false);

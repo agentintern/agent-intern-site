@@ -35,7 +35,7 @@ const TORSO_RINGS = smoothRings([
   { y: 1.29, rx: 0.5, rz: 0.26, n: 2.3 },
   { y: 1.36, rx: 0.28, rz: 0.21, n: 2.2 },
   { y: 1.39, rx: 0.17, rz: 0.17, n: 2.1 },
-], 14);
+], 8);
 
 function torsoRing(y: number): Ring {
   let a = TORSO_RINGS[0] as Ring;
@@ -173,14 +173,14 @@ function buildHand(s: Surfaces, side: number): Group {
       { at: new Vector3(x, -0.18, 0), rx: 0.03 },
       { at: new Vector3(x, -0.2 - length * 0.55, 0.012), rx: 0.03 },
       { at: new Vector3(x, -0.2 - length, 0.04), rx: 0.024 },
-    ], 10, 4), s.steel);
+    ], 8, 3), s.steel, false);
     hand.add(finger);
   });
   const thumb = mesh(tube([
     { at: new Vector3(-side * 0.09, -0.07, 0.03), rx: 0.034 },
     { at: new Vector3(-side * 0.13, -0.14, 0.05), rx: 0.03 },
     { at: new Vector3(-side * 0.125, -0.19, 0.075), rx: 0.024 },
-  ], 10, 4), s.steel);
+  ], 8, 3), s.steel, false);
   hand.add(thumb);
   return hand;
 }
@@ -303,7 +303,7 @@ class Spring {
 }
 
 function buildChest(s: Surfaces, chest: Group): { tie: Swinging; badge: Group } {
-  chest.add(mesh(loft(TORSO_RINGS, 144, (angle, ring) => shirtFolds(angle, ring), shirtShade), s.shirtFolded));
+  chest.add(mesh(loft(TORSO_RINGS, 136, (angle, ring) => shirtFolds(angle, ring), shirtShade), s.shirtFolded));
 
   // The collar stands around the neck and folds down to two crisp points, as on the PFP.
   chest.add(mesh(loft(smoothRings([
@@ -359,7 +359,7 @@ function buildChest(s: Surfaces, chest: Group): { tie: Swinging; badge: Group } 
       { at: new Vector3(side * 0.235, 0.98 - 1.26, chestSurface(0.235, 0.98) + 0.026), rx: 0.0125 },
       { at: new Vector3(side * 0.13, 0.84 - 1.26, front(0.84 - 1.26) - 0.006), rx: 0.0125 },
       { at: new Vector3(side * 0.012, clipY + 0.03, front(clipY) + 0.004), rx: 0.0125 },
-    ], 8, 8), s.cord);
+    ], 6, 6), s.cord, false);
     badge.add(cord);
   }
   const hook = mesh(block(0.05, 0.11, 0.024, 0.01), s.steel, false);

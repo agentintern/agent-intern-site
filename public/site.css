@@ -357,13 +357,15 @@ main { position: relative; }
   body[data-page="home"] main::before { display: none; }
 }
 @keyframes rise-in { from { opacity: 0; transform: translateY(26px); } }
+@keyframes rise-only { from { transform: translateY(18px); } }
 @keyframes bob { 50% { transform: translateY(5px) rotate(45deg); } }
 @keyframes poster-breathe { 50% { transform: translateX(-50%) scale(1.006); } }
 @media (prefers-reduced-motion: no-preference) {
   .scroll-cue i { animation: bob 1.4s ease-in-out infinite; }
   .stage-poster { animation: poster-breathe 4.6s ease-in-out infinite; }
   @supports (animation-timeline: view()) {
-    .rise, .paper, .desk-card, .tray-card, .stamp-card, .board-card, .crt, .proof li { animation: rise-in linear both; animation-timeline: view(); animation-range: entry 0% entry 26%; }
+    .rise { animation: rise-in linear both; animation-timeline: view(); animation-range: entry 0% entry 26%; }
+    .paper, .desk-card, .tray-card, .stamp-card, .board-card, .crt, .proof li { animation: rise-only linear both; animation-timeline: view(); animation-range: entry 0% entry 26%; }
     .stamp { animation: hit linear both; animation-timeline: view(); animation-range: entry 8% entry 30%; }
   }
   .tray .sheet-note { animation: drop 0.35s ease-out backwards; }

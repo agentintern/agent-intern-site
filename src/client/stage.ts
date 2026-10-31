@@ -7,6 +7,9 @@ import { hum, keyClick, stampThud } from './sound';
 // can't keep up, the poster stays and the page reads the same.
 const SLOW_MS = 1000 / 40;
 const WATCH_MS = 3000;
+// This many frames in a row, each this slow, and it doesn't wait the 3 seconds.
+const HOPELESS_MS = 120;
+const HOPELESS_FRAMES = 6;
 const MOODS: readonly string[] = ['asleep', 'working', 'thinking', 'stuck', 'panicking', 'celebrating', 'refusing'];
 
 let office: Office | null = null;
@@ -16,8 +19,12 @@ function canRender(): boolean {
   const { connection } = navigator as Navigator & { connection?: { saveData?: boolean } };
   if (reducedMotion() || connection?.saveData) return false;
   const context = document.createElement('canvas').getContext('webgl2');
-  context?.getExtension('WEBGL_lose_context')?.loseContext();
-  return Boolean(context);
+  if (!context) return false;
+  // With no real graphics chip the browser draws in software, on the same thread as the page. The poster is better.
+  const info = context.getExtension('WEBGL_debug_renderer_info');
+  const renderer = info ? String(context.getParameter(info.UNMASKED_RENDERER_WEBGL)) : '';
+  context.getExtension('WEBGL_lose_context')?.loseContext();
+  return !/swiftshader|llvmpipe|softpipe|software|basic render/i.test(renderer);
 }
 
 // The mood comes from one place: the state the server wrote into the page. Refreshes update it there.
@@ -136,6 +143,7 @@ async function run(host: HTMLElement): Promise<void> {
   let frames = 0;
   let lowered = false;
   let stopped = false;
+  let crawling = 0;
 
   const quit = (): void => {
     stopped = true;
@@ -171,9 +179,15 @@ async function run(host: HTMLElement): Promise<void> {
       hum(false);
       return;
     }
-    // A gap this long is the tab coming back, not a slow frame.
-    if (time - last > 250) windowStart = 0;
+    const gap = time - last;
     last = time;
+    // A gap over 250 ms is the tab coming back, not a slow frame.
+    if (gap > 250) windowStart = 0;
+    crawling = gap > HOPELESS_MS && gap <= 250 ? crawling + 1 : 0;
+    if (crawling >= HOPELESS_FRAMES) {
+      quit();
+      return;
+    }
     live.draw(time);
     hum(true);
     watch(time);
