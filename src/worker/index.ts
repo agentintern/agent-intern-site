@@ -95,6 +95,9 @@ async function purge(request: Request, paths: string[]): Promise<void> {
   await Promise.all(paths.map((path) => cache.delete(new Request(`${origin}${path}`))));
 }
 
+// What a change of shift shows up on. The Cache API is per data center, so a read elsewhere can still lag by the TTL.
+const SHIFT_READS = ['/', '/live', '/history', '/status', '/changelog', '/api/state', '/api/live', '/api/status', '/api/shifts'];
+
 async function htmlRoute(env: Env, pathname: string, origin: string): Promise<Rendered | Response | null> {
   let match: RegExpMatchArray | null;
   switch (pathname) {
@@ -242,6 +245,7 @@ async function postRoute(request: Request, env: Env, ctx: Ctx, url: URL, origin:
       const { id, task_text: body, proposer } = result.shift;
       ctx.waitUntil(sendPush(env, `shipped:${id}`, { title: 'The intern shipped', body, url: `${origin}/shift/${id}` }, proposer ? { wallet: proposer, title: 'Your task shipped' } : undefined));
     }
+    await purge(request, SHIFT_READS);
     return json({ status: result.status });
   }
   if ((match = pathname.match(/^\/api\/gate\/shot\/(\d{1,9})\/(before|after)$/))) {
@@ -259,13 +263,18 @@ async function postRoute(request: Request, env: Env, ctx: Ctx, url: URL, origin:
       if (shift.worked_by === 'intern') {
         ctx.waitUntil(sendPush(env, `started:${shift.id}`, { title: 'The intern is on shift', body: shift.task_text, url: `${origin}/live` }));
       }
+      await purge(request, SHIFT_READS);
       return json({ shift });
     }
-    if (pathname === '/api/shift/team') return json({ shift: await startTeamChange(env, body) });
-    if (pathname === '/api/shift/finish') return json({ shift: await finishShift(env, body) });
-    if (pathname === '/api/shift/reopen') return json({ shift: await reopenShift(env, body) });
-    if (pathname === '/api/shift/pause') return json(await setPaused(env, body.reason));
-    throw new HttpError(404, 'Not found.');
+    const answer =
+      pathname === '/api/shift/team' ? { shift: await startTeamChange(env, body) }
+      : pathname === '/api/shift/finish' ? { shift: await finishShift(env, body) }
+      : pathname === '/api/shift/reopen' ? { shift: await reopenShift(env, body) }
+      : pathname === '/api/shift/pause' ? await setPaused(env, body.reason)
+      : null;
+    if (!answer) throw new HttpError(404, 'Not found.');
+    await purge(request, SHIFT_READS);
+    return json(answer);
   }
   if (pathname === '/mcp') return mcp(env, request, origin);
 
