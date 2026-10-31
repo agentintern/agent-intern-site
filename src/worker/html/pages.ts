@@ -100,7 +100,7 @@ export async function playPage(env: Env, day?: number): Promise<Rendered> {
     state: shiftLine(o),
     body: html`
 <h1 class="sr">Last Day at the Office${day ? `, Daily Shift ${day}` : ''}</h1>
-<div class="play-frame" id="play-frame"><iframe id="game" title="Last Day at the Office" src="${SITE.gameOrigin}/" sandbox="allow-scripts" referrerpolicy="no-referrer" data-day="${day ?? ''}" data-seed="${dailySeed(shown)}" data-today="${today}" data-hall="${JSON.stringify(hall)}"></iframe></div>
+<div class="play-frame" id="play-frame"><iframe id="game" title="Last Day at the Office" src="${env.GAME_ORIGIN || SITE.gameOrigin}/" sandbox="allow-scripts" referrerpolicy="no-referrer" data-day="${day ?? ''}" data-seed="${dailySeed(shown)}" data-today="${today}" data-hall="${JSON.stringify(hall)}"></iframe></div>
 <p class="muted play-note">The game runs in a sealed frame with no way to reach your wallet or this site. <a href="/proof#sandbox">Prove it</a>.</p>
 <div class="office-grid">
 <section class="paper" aria-labelledby="score-title">

@@ -25,6 +25,8 @@ import { changelog, homeState, liveFeed, shiftDetail, shiftHistory, status, boar
 const MAX_SHOT_BYTES = 650_000;
 const HTML_TTL = 15;
 
+const gameAddress = (env: Env): string => env.GAME_ORIGIN || SITE.gameOrigin;
+
 function csp(gameOrigin: string): string {
   return [
     `default-src 'none'`, `script-src 'self'`, `style-src 'self'`, `img-src 'self' data: blob:`, `font-src 'self'`,
@@ -55,7 +57,7 @@ function htmlResponse(body: string, status: number, extra: Record<string, string
 
 function pageResponse(env: Env, page: Rendered): Response {
   return htmlResponse(renderPage(env, page, page.state), page.status ?? 200, {
-    'content-security-policy': csp(SITE.gameOrigin),
+    'content-security-policy': csp(gameAddress(env)),
     'x-frame-options': 'DENY',
     'cross-origin-opener-policy': 'same-origin-allow-popups',
   });
@@ -82,6 +84,14 @@ async function edgeCached(request: Request, ctx: Ctx, ttl: number, build: () => 
     ctx.waitUntil(cache.put(key, stored));
   }
   return response;
+}
+
+// A person who just acted has to see it, so a write drops the cached reads it changed.
+async function purge(request: Request, paths: string[]): Promise<void> {
+  if (typeof caches === 'undefined') return;
+  const cache = (caches as unknown as { default: Cache }).default;
+  const { origin } = new URL(request.url);
+  await Promise.all(paths.map((path) => cache.delete(new Request(`${origin}${path}`))));
 }
 
 async function htmlRoute(env: Env, pathname: string, origin: string): Promise<Rendered | Response | null> {
@@ -281,10 +291,20 @@ async function postRoute(request: Request, env: Env, ctx: Ctx, url: URL, origin:
     await dropSession(env, request);
     return json({ ok: true }, { headers: { 'set-cookie': CLEAR_COOKIE } });
   }
-  if (pathname === '/api/proposals') return json(await propose(env, ctx, request, await readJson(request)));
-  if (pathname === '/api/votes') return json(await vote(env, request, await readJson(request)));
+  if (pathname === '/api/proposals' || pathname === '/api/votes') {
+    const result = pathname === '/api/votes'
+      ? await vote(env, request, await readJson(request))
+      : await propose(env, ctx, request, await readJson(request));
+    const round = await advance(env);
+    await purge(request, ['/', '/board', '/hr', '/break', '/api/board', '/api/state', '/api/votes', `/api/votes/${round.id}`]);
+    return json(result);
+  }
   if (pathname === '/api/ratings') return json(await rateShift(env, request, await readJson(request)));
-  if (pathname === '/api/scores') return json(await submitScore(env, request, await readJson(request)));
+  if (pathname === '/api/scores') {
+    const result = await submitScore(env, request, await readJson(request));
+    await purge(request, ['/play', `/play/${dayNumber(Date.now())}`, '/api/leaderboard', `/api/leaderboard?day=${dayNumber(Date.now())}`]);
+    return json(result);
+  }
   if (pathname === '/api/practice/check') return json(await practiceCheck(env, request, await readJson(request)));
   if (pathname === '/api/push/subscribe') return json(await subscribePush(env, request, await readJson(request)));
   if (pathname === '/api/push/unsubscribe') {
@@ -301,7 +321,7 @@ async function postRoute(request: Request, env: Env, ctx: Ctx, url: URL, origin:
 function notFoundPage(env: Env, pathname: string): Response {
   const page: Page = raw404(pathname);
   return htmlResponse(renderPage(env, page, { label: 'off shift', on: false, paused: null }), 404, {
-    'content-security-policy': csp(SITE.gameOrigin),
+    'content-security-policy': csp(gameAddress(env)),
     'x-frame-options': 'DENY',
   });
 }

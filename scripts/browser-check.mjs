@@ -21,9 +21,9 @@ const check = (label, ok, detail = '') => {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? `  (${detail})` : ''}`);
 };
 
-const PAGES = ['/', '/play', '/board', '/live', '/history', '/how', '/about', '/status', '/changelog'];
+const PAGES = ['/', '/play', '/board', '/practice', '/live', '/history', '/hr', '/break', '/promotions', '/how', '/proof', '/proof/sandbox', '/about', '/status', '/changelog', '/security', '/brand', '/api'];
 const BANNED_WORDS = /\b(token|tokens|mint|solscan|contract address|buyback|buybacks|airdrop)\b/i;
-const BANNED_CLAIMS = /fully autonomous|24\/7|runs by itself/i;
+const BANNED_CLAIMS = /fully autonomous|24\/7|runs by itself|\baudited\b|guaranteed|ai-powered security/i;
 
 // Anything that reaches this server left the sandbox. It's how "blocked" gets proved, not assumed.
 const canary = { hits: [], server: null, url: '' };
@@ -48,12 +48,12 @@ const tmp = mkdtempSync(join(tmpdir(), 'site-check-'));
 
 async function startLocal() {
   writeFileSync('.dev.vars', [
-    `SITE_ORIGIN=${SITE}`, 'SHIFT_TOKEN=local-shift', 'WATCHER_TOKEN=local-watcher', 'GATE_TOKEN=local-gate', 'IP_SALT=local',
+    `SITE_ORIGIN=${SITE}`, `GAME_ORIGIN=${LOCAL_GAME}`, 'SHIFT_TOKEN=local-shift', 'WATCHER_TOKEN=local-watcher', 'GATE_TOKEN=local-gate', 'IP_SALT=local',
   ].join('\n'));
   const run = (cmd, args, opts = {}) => spawnSync(cmd, args, { encoding: 'utf8', ...opts });
   rmSync('.wrangler/state', { recursive: true, force: true });
   run('npx', ['wrangler', 'd1', 'migrations', 'apply', 'agent-intern', '--local']);
-  run('node', ['scripts/build.mjs'], { env: { ...process.env, SITE_ORIGIN: SITE, GAME_ORIGIN: LOCAL_GAME } });
+  run('node', ['scripts/build.mjs']);
   const built = run('node', ['scripts/build.mjs'], { cwd: gameRoot, env: { ...process.env, SITE_ORIGIN: SITE } });
   if (built.status !== 0) throw new Error(built.stderr);
 
@@ -125,7 +125,7 @@ async function pageChecks(browser) {
   const page = await context.newPage();
   const problems = [];
   const foreign = new Set();
-  const allowed = [new URL(SITE).origin, new URL(remote ? remote.replace('://', '://play.') : LOCAL_GAME).origin];
+  const allowed = [new URL(SITE).origin, new URL(remote ? remote.replace('://', '://play.') : LOCAL_GAME).origin, 'https://x.com'];
   page.on('console', (m) => { if (m.type() === 'error') problems.push(`${page.url()}: ${m.text().slice(0, 160)}`); });
   page.on('pageerror', (e) => problems.push(`${page.url()}: ${String(e).slice(0, 160)}`));
   page.on('request', (r) => {
@@ -136,8 +136,12 @@ async function pageChecks(browser) {
   for (const path of PAGES) {
     await page.goto(`${SITE}${path}`, { waitUntil: 'load' });
     await page.waitForTimeout(500);
-    const wide = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-    check(`${path} has no sideways scroll at 375 px`, wide <= 0, `${wide}px over`);
+    for (const width of [375, 768, 1440]) {
+      await page.setViewportSize({ width, height: 800 });
+      const wide = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      check(`${path} has no sideways scroll at ${width} px`, wide <= 0, `${wide}px over`);
+    }
+    await page.setViewportSize({ width: 375, height: 800 });
     const text = await page.evaluate(() => document.body.innerText);
     check(`${path} mentions no token in test mode`, !BANNED_WORDS.test(text), text.match(BANNED_WORDS)?.[0]);
     check(`${path} makes no banned claim`, !BANNED_CLAIMS.test(text));
@@ -171,8 +175,8 @@ async function boardFlow(browser) {
   await page.waitForFunction(() => /Turned down/.test(document.getElementById('propose-message').textContent));
   const reason = await page.textContent('#propose-message');
   check('a bad task is turned down with a plain reason', /crypto|money/.test(reason), reason.slice(0, 60));
-  await page.waitForFunction(() => /rejected/i.test(document.getElementById('rejected').textContent));
-  const shown = await page.textContent('#rejected');
+  await page.waitForFunction(() => /crypto|money/i.test(document.getElementById('rejected-box').textContent));
+  const shown = await page.textContent('#rejected-box');
   check('a turned down task shows the reason in public', /crypto|money/.test(shown));
   check("but never the rejected task's words", !shown.includes('token gate'));
   const api = await page.evaluate(() => fetch('/api/board', { cache: 'no-store' }).then((r) => r.text()));
@@ -192,7 +196,7 @@ async function boardFlow(browser) {
     check('a vote lands and shows as yours', true);
     await page.waitForSelector('[data-verify]');
     await page.click('[data-verify]');
-    await page.waitForFunction(() => document.querySelector('#record .ok')?.textContent.includes('valid'));
+    await page.waitForFunction(() => document.querySelector('#record-box .ok')?.textContent.includes('valid'));
     check('the browser verifies the signature itself', true);
     await page.click('#verify-form button');
     await page.waitForFunction(() => /Valid/.test(document.getElementById('verify-result').textContent));
@@ -250,7 +254,7 @@ async function realGameChecks(browser) {
   await page.fill('#score-name', 'Temp Worker');
   await page.click('#score-form button');
   await page.waitForFunction(() => /Filed/.test(document.getElementById('score-message').textContent));
-  await page.waitForFunction(() => document.getElementById('leaderboard').textContent.includes('Temp Worker'));
+  await page.waitForFunction(() => document.getElementById('all-board').textContent.includes('Temp Worker'));
   check('the score lands on the leaderboard with no wallet', true);
   await context.close();
 }

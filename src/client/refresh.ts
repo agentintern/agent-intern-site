@@ -30,6 +30,6 @@ export function swap(next: Document): void {
 }
 
 export async function refreshNow(): Promise<void> {
-  const response = await fetch(`${location.pathname}`, { cache: 'reload' });
+  const response = await fetch(location.pathname, { cache: 'no-store' });
   if (response.ok) swap(new DOMParser().parseFromString(await response.text(), 'text/html'));
 }

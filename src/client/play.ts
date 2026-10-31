@@ -1,5 +1,6 @@
 import { dailySeed, dayNumber } from '../shared/daily';
 import { ApiError, byId, need, post, say, store } from './dom';
+import { refreshNow } from './refresh';
 
 interface Run { score: number; tasks: number; coffees: number; nearMisses: number; duration: number; seed: number; version: string }
 
@@ -92,6 +93,7 @@ export function startPlay(): void {
       run = null;
       form.hidden = true;
       need('score-empty').hidden = false;
+      return refreshNow();
     }).catch((cause: unknown) => say(message, cause instanceof ApiError ? cause.message : 'That did not save.', 'error'));
   });
 }

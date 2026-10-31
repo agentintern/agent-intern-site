@@ -14,6 +14,7 @@ export interface Env {
   VAPID_PRIVATE_JWK?: string;
   // Local development only. Production always takes these from config/site.json.
   SITE_ORIGIN?: string;
+  GAME_ORIGIN?: string;
 }
 
 export interface Ctx {
