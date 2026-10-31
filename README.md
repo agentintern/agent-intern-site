@@ -9,7 +9,7 @@ and status. The intern can never touch it.
 A person maintains this project, and Claude Code writes much of the code. Claude Code is the tool used.
 This project isn't made, endorsed or sponsored by Anthropic.
 
-![The office at night](docs/screenshot.png)
+![The office at night](docs/screenshot.jpg)
 
 ## Run it
 
