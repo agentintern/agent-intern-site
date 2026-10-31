@@ -345,7 +345,7 @@ export interface Stage {
   step(dt: number, time: number): void;
   setDrawers(open: number): void;
   setCounts(counts: DrawerCounts): void;
-  setGameShot(url: string, version: string): Promise<void>;
+  setGameShot(image: ImageBitmap, version: string): void;
   setShift(on: boolean): void;
   stamp(word: string | null): void;
   onThud: () => void;
@@ -479,8 +479,7 @@ export function buildStage(scene: Scene, s: Surfaces, robot: Object3D): Stage {
         paintLabel(drawer, i, String(count));
       });
     },
-    async setGameShot(url, version) {
-      const image = await createImageBitmap(await (await fetch(url)).blob());
+    setGameShot(image, version) {
       const { ctx, texture } = canvasTexture(640, 468);
       const scale = Math.max(640 / image.width, 468 / image.height);
       const w = image.width * scale;

@@ -9,7 +9,7 @@ export type ToWorker =
   | { type: 'scroll'; y: number; story: number }
   | { type: 'mood'; mood: RobotState }
   | { type: 'facts'; facts: OfficeFacts }
-  | { type: 'shot'; url: string; version: string }
+  | { type: 'shot'; image: ImageBitmap; version: string }
   | { type: 'pointer'; x: number; y: number }
   | { type: 'click'; x: number; y: number }
   | { type: 'visible'; visible: boolean };
@@ -100,7 +100,7 @@ function handle(message: ToWorker): void {
       break;
     case 'mood': office.setMood(message.mood); break;
     case 'facts': office.setFacts(message.facts); break;
-    case 'shot': void office.setGameShot(message.url, message.version).catch(() => undefined); break;
+    case 'shot': office.setGameShot(message.image, message.version); break;
     case 'pointer': office.pointer(message.x, message.y); break;
     case 'click':
       office.pointer(message.x, message.y);

@@ -127,6 +127,13 @@ function startTaskBox(): void {
   setTimeout(tick, 2600);
 }
 
+// The page fetches this and hands it over. A fetch inside the worker logs an error in Safari if the visitor leaves early.
+async function sendGameShot(host: HTMLElement): Promise<void> {
+  if (!host.dataset.shot) return;
+  const image = await createImageBitmap(await (await fetch(host.dataset.shot)).blob());
+  office?.postMessage({ type: 'shot', image, version: host.dataset.shotVersion ?? '' } satisfies ToWorker, [image]);
+}
+
 function measure(host: HTMLElement): { width: number; height: number; ratio: number; wide: boolean } {
   return { width: host.clientWidth, height: host.clientHeight, ratio: window.devicePixelRatio || 1, wide: window.matchMedia('(min-width: 960px)').matches };
 }
@@ -168,8 +175,7 @@ function run(host: HTMLElement): void {
   const offscreen = canvas.transferControlToOffscreen();
   worker.postMessage({ type: 'start', canvas: offscreen, size: measure(host), fixed: !story, coarse: window.matchMedia('(pointer: coarse)').matches } satisfies ToWorker, [offscreen]);
   syncStage();
-  const shot = host.dataset.shot;
-  if (shot) tell({ type: 'shot', url: new URL(shot, location.href).href, version: host.dataset.shotVersion ?? '' });
+  void sendGameShot(host).catch(() => undefined);
   window.dispatchEvent(new Event('scroll'));
 
   let onScreen = true;

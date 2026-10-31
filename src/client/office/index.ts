@@ -65,7 +65,7 @@ export interface Office {
   stop(): void;
   setMood(mood: RobotState): void;
   setFacts(facts: OfficeFacts): void;
-  setGameShot(url: string, version: string): Promise<void>;
+  setGameShot(image: ImageBitmap, version: string): void;
   setStory(chapter: number): void;
   pointer(x: number, y: number): void;
   hitsRobot(x: number, y: number): boolean;
@@ -243,7 +243,7 @@ export async function startOffice(canvas: OffscreenCanvas | HTMLCanvasElement, f
       facts = next;
       stage.setCounts(next.counts);
     },
-    setGameShot: (url, version) => stage.setGameShot(url, version),
+    setGameShot: (image, version) => stage.setGameShot(image, version),
     setStory(chapter) { storyTarget = chapter; },
     pointer(x, y) {
       pointerX = x;
