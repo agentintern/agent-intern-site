@@ -328,6 +328,10 @@ function notFoundPage(env: Env, pathname: string): Response {
 
 export async function handle(request: Request, env: Env, ctx: Ctx): Promise<Response> {
   const url = new URL(request.url);
+  // Signatures name one domain, so the old address sends people to the real one.
+  if (url.hostname.endsWith('.pages.dev') && !env.SITE_ORIGIN) {
+    return Response.redirect(`${SITE.siteOrigin}${url.pathname}${url.search}`, 301);
+  }
   const wantsPage = !url.pathname.startsWith('/api/') && url.pathname !== '/mcp' && request.method === 'GET';
   try {
     const origin = siteOrigin(env);

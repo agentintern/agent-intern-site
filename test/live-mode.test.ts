@@ -3,7 +3,7 @@ import { createHarness, newWallet, type Harness } from './harness';
 
 // The fake mint: everything below runs the real-token code path against a mock RPC.
 const FAKE_MINT = 'FakeMint1111111111111111111111111111111111111';
-vi.mock('../config/token.json', () => ({ default: { mint: 'FakeMint1111111111111111111111111111111111111', threshold: 100000 } }));
+vi.mock('../config/token.json', () => ({ default: { mint: 'FakeMint1111111111111111111111111111111111111', threshold: 100000, creatorFees: '' } }));
 
 let h: Harness;
 const realFetch = globalThis.fetch;
@@ -38,6 +38,38 @@ beforeEach(() => {
   });
 });
 afterEach(() => { vi.unstubAllGlobals(); });
+
+describe('the single switch', () => {
+  it('turns TEST MODE off and the launch pages on', async () => {
+    const home = await h.call('/');
+    expect(String(home.body)).not.toContain('TEST MODE');
+    expect(String(home.body)).toContain('FakeM');
+    const facts = await h.call('/token');
+    expect(facts.status).toBe(200);
+    expect(String(facts.body)).toContain(FAKE_MINT);
+    expect(String(facts.body)).toContain('Not stated yet.');
+    expect((await h.call('/.well-known/agent-intern.json')).body.mode).toBe('live');
+    expect(String((await h.call('/how')).body)).toContain('of the token');
+  });
+
+  it('stops offering fake balances', async () => {
+    const page = String((await h.call('/board')).body);
+    expect(page).toContain('data-test-mode="0"');
+    expect(page).not.toContain('TEST MODE');
+  });
+
+  it('numbers the first wallets to sign a pass, and only wallets with a pass', async () => {
+    const [holder, empty] = await Promise.all([newWallet(), newWallet()]);
+    rpc.balances.set(holder.address, [{ amount: '500000000000', decimals: 6 }]);
+    await h.signIn(empty);
+    await h.signIn(holder);
+    const row = await h.db.prepare('SELECT n FROM founding_bosses WHERE wallet = ?').bind(holder.address).first<{ n: number }>();
+    expect(row?.n).toBe(1);
+    expect(await h.db.prepare('SELECT n FROM founding_bosses WHERE wallet = ?').bind(empty.address).first()).toBeNull();
+    await h.signIn(holder);
+    expect((await h.db.prepare('SELECT COUNT(*) AS n FROM founding_bosses').first<{ n: number }>())?.n).toBe(1);
+  });
+});
 
 describe('with a mint set', () => {
   it('shows live mode and the mint', async () => {
