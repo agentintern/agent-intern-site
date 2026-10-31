@@ -16,7 +16,7 @@ import { shiftLine } from './html/parts';
 import { clientIp, HttpError, json, readJson, requireBearer, requireSameOrigin } from './http';
 import { MINUTE, rateLimit } from './ratelimit';
 import { bossProfile, getProposal, health, hallOfBosses, hrLog, overview, practiceCheck, promotionLevel, rateShift, recordFoundingBoss, shiftCounts } from './public';
-import { sendPush, subscribePush, unsubscribePush } from './push';
+import { sendPush, subscribePush, unsubscribePush, warnVoteClosing } from './push';
 import { advance } from './rounds';
 import { finishShift, getShift, readShot, receiveGateEvent, receiveLiveEvent, reopenShift, setPaused, startShift, startTeamChange, storeShot } from './shifts';
 import { leaderboard, submitScore } from './scores';
@@ -64,7 +64,7 @@ function pageResponse(env: Env, page: Rendered): Response {
 }
 
 // Reads are served from the edge for a few seconds, so a launch crowd doesn't turn into database load.
-async function edgeCached(request: Request, ctx: Ctx, ttl: number, build: () => Promise<Response>): Promise<Response> {
+async function edgeCached(request: Request, env: Env, ctx: Ctx, ttl: number, build: () => Promise<Response>): Promise<Response> {
   if (typeof caches === 'undefined' || request.method !== 'GET') return build();
   const cache = (caches as unknown as { default: Cache }).default;
   const url = new URL(request.url);
@@ -76,6 +76,7 @@ async function edgeCached(request: Request, ctx: Ctx, ttl: number, build: () => 
     served.headers.delete('x-browser-cache');
     return served;
   }
+  ctx.waitUntil(warnVoteClosing(env, url.origin).catch(() => undefined));
   const response = await build();
   if (response.ok) {
     const stored = new Response(response.clone().body, response);
@@ -150,7 +151,7 @@ async function getRoute(request: Request, env: Env, ctx: Ctx, url: URL, origin: 
   }
   if (pathname === '/api/health') return json(await health(env));
 
-  return edgeCached(request, ctx, HTML_TTL, async () => {
+  return edgeCached(request, env, ctx, HTML_TTL, async () => {
     if (pathname === '/api/state') return json(await homeState(env), { maxAge: 4 });
     if (pathname === '/api/board') return json(await board(env), { maxAge: 3 });
     if (pathname === '/api/live') {
@@ -238,7 +239,8 @@ async function postRoute(request: Request, env: Env, ctx: Ctx, url: URL, origin:
     await requireBearer(request, env.GATE_TOKEN);
     const result = await receiveGateEvent(env, await readJson(request));
     if (result.status === 'shipped' && result.shift?.worked_by === 'intern') {
-      ctx.waitUntil(sendPush(env, `shipped:${result.shift.id}`, { title: 'The intern shipped', body: result.shift.task_text, url: `${origin}/shift/${result.shift.id}` }));
+      const { id, task_text: body, proposer } = result.shift;
+      ctx.waitUntil(sendPush(env, `shipped:${id}`, { title: 'The intern shipped', body, url: `${origin}/shift/${id}` }, proposer ? { wallet: proposer, title: 'Your task shipped' } : undefined));
     }
     return json({ status: result.status });
   }

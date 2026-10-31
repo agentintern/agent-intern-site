@@ -51,7 +51,7 @@ interface CallInit {
 export async function createHarness(): Promise<Harness> {
   const mf = new Miniflare({ modules: true, script: 'export default { fetch() { return new Response("") } }', d1Databases: ['DB'] });
   const db = (await mf.getD1Database('DB')) as unknown as D1Database;
-  for (const file of ['0001_init.sql', '0002_night.sql']) {
+  for (const file of ['0001_init.sql', '0002_night.sql', '0003_push_wallet.sql']) {
     const schema = readFileSync(fileURLToPath(new URL(`../migrations/${file}`, import.meta.url).href), 'utf8');
     for (const statement of schema.replace(/--.*$/gm, '').split(/;\s*$/m)) {
       if (statement.trim()) await db.prepare(statement).run();

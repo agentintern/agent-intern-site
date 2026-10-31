@@ -1,3 +1,4 @@
+import { sessionWallet } from './auth';
 import { SITE } from './config';
 import type { Env } from './env';
 import { clientIp, HttpError } from './http';
@@ -62,14 +63,22 @@ interface Subscription {
   endpoint: string;
   p256dh: string;
   auth: string;
+  wallet: string | null;
 }
 
 // Each message goes out once, whatever keeps asking. A dead subscription gets removed.
-export async function sendPush(env: Env, key: string, message: { title: string; body: string; url: string }): Promise<number> {
+interface PushMessage {
+  title: string;
+  body: string;
+  url: string;
+}
+
+// `personal` swaps the title for one wallet, which is how "your task shipped" reaches the person who proposed it.
+export async function sendPush(env: Env, key: string, message: PushMessage, personal?: { wallet: string; title: string }): Promise<number> {
   if (!SITE.vapidPublic || !env.VAPID_PRIVATE_JWK) return 0;
   const claimed = await env.DB.prepare('INSERT OR IGNORE INTO push_sent (key, at) VALUES (?, ?)').bind(key, Date.now()).run();
   if (claimed.meta.changes !== 1) return 0;
-  const subs = await env.DB.prepare('SELECT endpoint, p256dh, auth FROM push_subscriptions LIMIT 200').all<Subscription>();
+  const subs = await env.DB.prepare('SELECT endpoint, p256dh, auth, wallet FROM push_subscriptions LIMIT 200').all<Subscription>();
   let sent = 0;
   for (const sub of subs.results) {
     try {
@@ -82,7 +91,7 @@ export async function sendPush(env: Env, key: string, message: { title: string; 
           ttl: '3600',
           authorization: `vapid t=${token}, k=${SITE.vapidPublic}`,
         },
-        body: await encryptPayload(JSON.stringify(message), sub.p256dh, sub.auth),
+        body: await encryptPayload(JSON.stringify(personal && sub.wallet === personal.wallet ? { ...message, title: personal.title } : message), sub.p256dh, sub.auth),
       });
       if (response.status === 404 || response.status === 410) {
         await env.DB.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').bind(sub.endpoint).run();
@@ -96,6 +105,16 @@ export async function sendPush(env: Env, key: string, message: { title: string; 
   return sent;
 }
 
+const WARN_BEFORE_MS = 60 * 60 * 1000;
+
+// There's no scheduler, so this goes out on the first read in the last hour of a round. A quiet hour means a late
+// warning, or none.
+export async function warnVoteClosing(env: Env, origin: string): Promise<void> {
+  const round = await env.DB.prepare(`SELECT id, closes_at FROM rounds WHERE status = 'open' ORDER BY id DESC LIMIT 1`).first<{ id: number; closes_at: number }>();
+  if (!round || Date.now() < round.closes_at - WARN_BEFORE_MS || Date.now() >= round.closes_at) return;
+  await sendPush(env, `closing:${round.id}`, { title: 'The vote closes within the hour', body: `Round ${round.id} is still open.`, url: `${origin}/board` });
+}
+
 const PUSH_HOST = /^https:\/\/[a-z0-9.-]+\.(googleapis\.com|mozilla\.com|windows\.com|apple\.com)\//;
 
 export async function subscribePush(env: Env, request: Request, body: { endpoint?: unknown; keys?: { p256dh?: unknown; auth?: unknown } }): Promise<{ ok: true }> {
@@ -107,9 +126,9 @@ export async function subscribePush(env: Env, request: Request, body: { endpoint
   if (typeof endpoint !== 'string' || endpoint.length > 600 || !PUSH_HOST.test(endpoint)) throw new HttpError(400, "That isn't a push subscription.");
   if (typeof p256dh !== 'string' || typeof auth !== 'string' || p256dh.length > 200 || auth.length > 100) throw new HttpError(400, "That isn't a push subscription.");
   await env.DB.prepare(
-    `INSERT INTO push_subscriptions (endpoint, p256dh, auth, created_at) VALUES (?1, ?2, ?3, ?4)
-     ON CONFLICT(endpoint) DO UPDATE SET p256dh = ?2, auth = ?3`,
-  ).bind(endpoint, p256dh, auth, Date.now()).run();
+    `INSERT INTO push_subscriptions (endpoint, p256dh, auth, created_at, wallet) VALUES (?1, ?2, ?3, ?4, ?5)
+     ON CONFLICT(endpoint) DO UPDATE SET p256dh = ?2, auth = ?3, wallet = ?5`,
+  ).bind(endpoint, p256dh, auth, Date.now(), await sessionWallet(env, request)).run();
   return { ok: true };
 }
 

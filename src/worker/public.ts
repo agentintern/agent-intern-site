@@ -71,11 +71,12 @@ export interface Overview {
   counts: Counts;
   version: string | null;
   level: ReturnType<typeof promotionLevel>;
+  founding: number;
 }
 
 export async function overview(env: Env): Promise<Overview> {
   const round = await advance(env);
-  const [pause, open, proposals, queue, counts, recent, commit] = await Promise.all([
+  const [pause, open, proposals, queue, counts, recent, commit, founding] = await Promise.all([
     getPause(env),
     openShift(env),
     listProposals(env, round.id),
@@ -85,6 +86,7 @@ export async function overview(env: Env): Promise<Overview> {
     env.DB.prepare(
       `SELECT id, commit_sha, summary, version FROM shifts WHERE commit_sha IS NOT NULL AND status = 'shipped' ORDER BY id DESC LIMIT 1`,
     ).first<{ id: number; commit_sha: string; summary: string | null; version: string | null }>(),
+    testMode() ? null : env.DB.prepare('SELECT COUNT(*) AS n FROM founding_bosses').first<{ n: number }>(),
   ]);
   return {
     round,
@@ -97,6 +99,7 @@ export async function overview(env: Env): Promise<Overview> {
     counts,
     version: commit?.version ?? null,
     level: promotionLevel(counts.internShipped),
+    founding: founding?.n ?? 0,
   };
 }
 

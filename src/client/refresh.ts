@@ -22,6 +22,10 @@ export function startRefresh(seconds: number, afterSwap: () => void): void {
 }
 
 export function swap(next: Document): void {
+  document.body.dataset.shift = next.body.dataset.shift;
+  const scene = document.getElementById('scene');
+  const nextScene = next.getElementById('scene');
+  if (scene && nextScene) Object.assign(scene.dataset, nextScene.dataset);
   for (const incoming of next.querySelectorAll<HTMLElement>('[data-live]')) {
     const present = incoming.id ? document.getElementById(incoming.id) : null;
     if (!present || present.isEqualNode(incoming)) continue;

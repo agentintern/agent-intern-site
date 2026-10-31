@@ -284,6 +284,12 @@ td.num, th.num { text-align: right; }
 .foot nav { display: flex; flex-wrap: wrap; gap: 4px 14px; }
 .foot a { color: var(--steel); }
 
+.day-one { margin: 12px 0 0; padding: 10px 12px; border-left: 3px solid var(--tie, #d7392f); background: rgba(0, 0, 0, 0.05); }
+
+/* The lights come on when a shift starts. */
+body::before { content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0; transition: opacity 1.4s ease-out; background: radial-gradient(70% 55% at 50% 0, rgba(255, 170, 80, 0.2), transparent 70%); }
+body[data-shift="on"]::before { opacity: 1; }
+
 @media (prefers-reduced-motion: no-preference) {
   .tray .sheet-note { animation: drop 0.35s ease-out backwards; }
   .tray .sheet-note:nth-child(2) { animation-delay: 0.06s; }

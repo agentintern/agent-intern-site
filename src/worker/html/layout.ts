@@ -83,7 +83,7 @@ ${page.noindex ? raw('<meta name="robots" content="noindex">') : ''}
 <meta name="twitter:image" content="${image}">
 <script type="module" src="/js/app.js"></script>
 </head>
-<body data-page="${page.path.split('/')[1] || 'home'}" data-refresh="${page.refresh ?? 0}" data-test-mode="${testMode() ? '1' : '0'}">
+<body data-page="${page.path.split('/')[1] || 'home'}" data-refresh="${page.refresh ?? 0}" data-test-mode="${testMode() ? '1' : '0'}" data-shift="${state.on ? 'on' : 'off'}">
 <a class="skip" href="#main">Skip to content</a>
 ${testMode() ? raw('<div class="ribbon" role="note"><span>TEST MODE</span> Balances here are fake.</div>') : ''}
 ${state.paused ? html`<div class="notice" role="status">Paused: ${state.paused}</div>` : ''}

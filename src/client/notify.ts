@@ -15,7 +15,7 @@ export function startNotify(): void {
     navigator.serviceWorker.register('/sw.js')
       .then((registration) => registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: toBytes(key) }))
       .then((subscription) => post('/api/push/subscribe', subscription.toJSON()))
-      .then(() => say(message, "You'll hear when a shift starts or a task ships. Turn it off in your browser settings.", 'ok'))
+      .then(() => say(message, "You'll hear when a shift starts, a vote is closing or a task ships. Turn it off in your browser settings.", 'ok'))
       .catch(() => say(message, 'That did not work, or notifications are blocked in this browser.', 'error'));
   });
 }

@@ -48,7 +48,9 @@ ${punchClock(o.round.closes_at)}
 <div><dt>Game</dt><dd>${o.version ? `v${o.version}` : 'v0.1.0'}</dd></div>
 <div><dt>Intern's title</dt><dd><a href="/promotions">${o.level.title}</a></dd></div>
 <div><dt>Real intern shifts</dt><dd>${o.counts.intern}</dd></div>
+${testMode() ? '' : html`<div><dt>Founding Bosses</dt><dd>${o.founding} of 100</dd></div>`}
 </dl>
+${o.counts.intern === 0 ? html`<p class="day-one"><b>Day 1.</b> No real intern shift has run yet. The first one lands right here, good or bad.</p>` : ''}
 </section>
 <section class="tray-card" aria-labelledby="tray-title">
 <h2 id="tray-title">The in-tray</h2>

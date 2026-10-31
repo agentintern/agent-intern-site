@@ -2,7 +2,6 @@ import { readFileSync } from 'node:fs';
 
 // Prints a pass or fail list before launch. It only reads. Run: npm run launch:check [site url]
 const SITE = process.argv[2] ?? 'https://agentintern.online';
-const GAME = new URL(SITE).origin.replace('://', '://play.');
 const token = JSON.parse(readFileSync('config/token.json', 'utf8'));
 const results = [];
 const check = (name, ok, detail = '') => {
@@ -50,7 +49,7 @@ const siteHeaders = (await fetch(`${SITE}/`)).headers;
 const siteCsp = siteHeaders.get('content-security-policy') ?? '';
 check('the site has a strict policy', siteCsp.includes("script-src 'self'") && !siteCsp.includes('unsafe'));
 check('the site sets HSTS', Boolean(siteHeaders.get('strict-transport-security')));
-const gameCsp = (await fetch(`${GAME}/`)).headers.get('content-security-policy') ?? '';
+const gameCsp = (await fetch(`${state?.config?.gameOrigin}/`)).headers.get('content-security-policy') ?? '';
 check('the game has no network', gameCsp.includes("connect-src 'none'"));
 check('the game is sandboxed', gameCsp.includes('sandbox allow-scripts') && !gameCsp.includes('allow-same-origin'));
 
@@ -61,7 +60,8 @@ let broken = 0;
 for (const href of links) {
   const url = href.startsWith('http') ? href : `${SITE}${href}`;
   const code = await head(url);
-  if (code >= 400 || code === 0) {
+  // Some outside sites answer 403 to anything that isn't a browser, and that says nothing about the link.
+  if (code === 0 || code === 404 || code >= 500 || (code >= 400 && !href.startsWith('http'))) {
     broken++;
     console.log(`      broken: ${href} (${code})`);
   }

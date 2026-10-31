@@ -1,9 +1,9 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { esc, html, raw } from '../src/worker/html/core';
 import { robotRows, robotSvg, ROBOT_WIDTH, type RobotState } from '../src/shared/robot';
 import { dailySeed, dayNumber, EPOCH_UTC } from '../src/shared/daily';
 import { promotionLevel } from '../src/worker/public';
-import { encryptPayload } from '../src/worker/push';
+import { encryptPayload, sendPush, warnVoteClosing } from '../src/worker/push';
 import { safeToShow } from '../src/worker/screen';
 import { createHarness, ORIGIN, newWallet, type Harness } from './harness';
 
@@ -255,6 +255,69 @@ describe('notifications', () => {
     expect(new DataView(body.buffer).getUint32(16)).toBe(4096);
     expect(body[20]).toBe(65);
     expect(body.length).toBe(21 + 65 + 5 + 1 + 16);
+  });
+
+  it('tells the person who proposed a task, and tells everyone else the plain news', async () => {
+    const devices = await Promise.all(['mine', 'other'].map(async (name) => {
+      const keys = (await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits'])) as CryptoKeyPair;
+      const raw = new Uint8Array((await crypto.subtle.exportKey('raw', keys.publicKey)) as ArrayBuffer);
+      const auth = crypto.getRandomValues(new Uint8Array(16));
+      const endpoint = `https://fcm.googleapis.com/fcm/send/${name}`;
+      await h.db.prepare('INSERT INTO push_subscriptions (endpoint, p256dh, auth, created_at, wallet) VALUES (?, ?, ?, ?, ?)')
+        .bind(endpoint, Buffer.from(raw).toString('base64url'), Buffer.from(auth).toString('base64url'), 1, name === 'mine' ? 'WalletA' : null).run();
+      return { endpoint, keys, raw, auth };
+    }));
+    const signing = (await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify'])) as CryptoKeyPair;
+    const received = new Map<string, Uint8Array>();
+    const realFetch = globalThis.fetch;
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (!url.startsWith('https://fcm.')) return realFetch(input, init);
+      received.set(url, init?.body as Uint8Array);
+      return new Response(null, { status: 201 });
+    });
+    try {
+      const env = { ...h.env, VAPID_PRIVATE_JWK: JSON.stringify(await crypto.subtle.exportKey('jwk', signing.privateKey)) };
+      const news = { title: 'The intern shipped', body: 'A stapler', url: 'https://agentintern.online/shift/9' };
+      expect(await sendPush(env, 'test:push', news, { wallet: 'WalletA', title: 'Your task shipped' })).toBe(2);
+      expect(await sendPush(env, 'test:push', news)).toBe(0);
+    } finally {
+      vi.stubGlobal('fetch', realFetch);
+    }
+    const read = async (d: (typeof devices)[number]): Promise<{ title: string }> => {
+      const body = received.get(d.endpoint) as Uint8Array;
+      const hkdf = async (salt: Uint8Array, ikm: ArrayBuffer, info: Uint8Array, bytes: number): Promise<ArrayBuffer> =>
+        crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt, info }, await crypto.subtle.importKey('raw', ikm, 'HKDF', false, ['deriveBits']), bytes * 8);
+      const words = (text: string): Uint8Array => new TextEncoder().encode(text);
+      const senderKey = body.slice(21, 86);
+      const sender = await crypto.subtle.importKey('raw', senderKey, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+      const shared = await crypto.subtle.deriveBits({ name: 'ECDH', public: sender } as unknown as SubtleCryptoDeriveKeyAlgorithm, d.keys.privateKey, 256);
+      const ikm = await hkdf(d.auth, shared, new Uint8Array([...words('WebPush: info\0'), ...d.raw, ...senderKey]), 32);
+      const salt = body.slice(0, 16);
+      const key = await hkdf(salt, ikm, words('Content-Encoding: aes128gcm\0'), 16);
+      const iv = await hkdf(salt, ikm, words('Content-Encoding: nonce\0'), 12);
+      const aes = await crypto.subtle.importKey('raw', key, 'AES-GCM', false, ['decrypt']);
+      const plain = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, aes, body.slice(86)));
+      return JSON.parse(new TextDecoder().decode(plain.slice(0, plain.lastIndexOf(2)))) as { title: string };
+    };
+    expect((await read(devices[0] as (typeof devices)[number])).title).toBe('Your task shipped');
+    expect((await read(devices[1] as (typeof devices)[number])).title).toBe('The intern shipped');
+    await h.db.prepare('DELETE FROM push_subscriptions').run();
+  });
+
+  it('warns once, in the last hour of a round, and never outside it', async () => {
+    const claimed = async (): Promise<number> => (await h.db.prepare(`SELECT COUNT(*) AS n FROM push_sent WHERE key LIKE 'closing:%'`).first<{ n: number }>())?.n ?? 0;
+    const env = { ...h.env, VAPID_PRIVATE_JWK: '{}' };
+    await h.call('/api/state');
+    const round = await h.db.prepare(`SELECT id, closes_at FROM rounds WHERE status = 'open' ORDER BY id DESC LIMIT 1`).first<{ id: number; closes_at: number }>();
+    await h.db.prepare('UPDATE rounds SET closes_at = ? WHERE id = ?').bind(Date.now() + 2 * 3_600_000, round?.id).run();
+    await warnVoteClosing(env, 'https://agentintern.online');
+    expect(await claimed()).toBe(0);
+    await h.db.prepare('UPDATE rounds SET closes_at = ? WHERE id = ?').bind(Date.now() + 1_800_000, round?.id).run();
+    await warnVoteClosing(env, 'https://agentintern.online');
+    await warnVoteClosing(env, 'https://agentintern.online');
+    expect(await claimed()).toBe(1);
+    await h.db.prepare('UPDATE rounds SET closes_at = ? WHERE id = ?').bind(round?.closes_at, round?.id).run();
   });
 
   it('only accepts real push services', async () => {
