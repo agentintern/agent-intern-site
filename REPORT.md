@@ -11,9 +11,8 @@ Shift 5's rollback is confirmed: `rolled-back` on the site, its pull request clo
 
 ## The office in 3D, 2026-10-31
 
-**Not in production yet.** This ran on a preview at https://preview.agent-intern.pages.dev, which uses the staging
-database. That database has no shifts, so the drawers show 0 there and four `/proof` links to shift pages return 404. The
-same links return 200 in production. `/play` doesn't load on the preview, because the game only allows the real domain.
+**Live in production.** It ran on a preview first, and went to production after a person approved it. The first deploy
+was run by that person, because the permission check stopped the agent from doing it.
 
 | Size | Measured | Budget |
 | --- | --- | --- |
@@ -22,19 +21,31 @@ same links return 200 in production. `/play` doesn't load on the preview, becaus
 | Poster, 1280 x 800 WebP | 36 KB | |
 | Scene, per frame, shadows included | 188,000 triangles, 169 draw calls | |
 
-| Check | Result |
-| --- | --- |
-| Browser suite on a local stack, Chromium and WebKit | 359 of 359 |
-| Each of the 7 moods from a mocked state, in both browsers | Pass |
-| The pointer, clicks and scrolling leave the mood alone, and a new state from the server changes it | Pass |
-| No usable WebGL, reduced motion and JS off | The poster stays, and the facts and links match the running page |
-| Lighthouse mobile on the preview, default settings | `/` 98 to 100, `/live` 100, `/board` 100, `/proof` 99, `/history` 100, with no blocking time and CLS 0 |
-| Lighthouse mobile on production, the same day | `/` 100, `/live` 100 |
-| Frame rate on an Apple M4, at desktop and phone sizes | 60 fps |
+| Check | Where | Result |
+| --- | --- | --- |
+| Browser suite, Chromium and WebKit | Local stack | 359 of 359 |
+| Each of the 7 moods from a mocked state, in both browsers | Local stack | Pass |
+| The pointer, clicks and scrolling leave the mood alone, and a new state from the server changes it | Local stack | Pass |
+| No usable WebGL, reduced motion and JS off: the poster stays, and the facts and links match the running page | Local stack, and production | Pass |
+| A read-only walk of 18 pages at 375, 768 and 1440 px, in Chromium and WebKit, with no console errors | Production | 362 of 362 |
+| The 7 moods, with the state mocked in the browser only | Production, Chromium | Pass |
+| The game loads in its sandbox on `/play`, in Chromium and WebKit | Production | Pass |
+| `npm run launch:check` | Production | 13 of 19, with all 46 proof links open |
+| Lighthouse mobile, default settings | Production | `/` 99, `/live` 100, `/board` 100, `/proof` 99, `/play` 99, `/history` 100. Accessibility, best practices and SEO are all 100, with no blocking time and CLS 0.009 at most |
+| Frame rate on an Apple M4, at desktop and phone sizes | Production | 60 fps |
 
-**What didn't run.** No real phone has opened this. The phone figures use a phone-sized window with the Mac's GPU, and
-slowing the CPU doesn't slow that GPU, so 30 fps on a mid-range phone is unproved. The fallback to the poster at low frame
-rates is built, and no test has triggered it. Sound hasn't been listened to.
+Before this work, production scored 100 on `/` and `/live`. The home page gave up one point: its largest paint is now the
+poster, at 2.0 s against 1.5 s for text.
+
+**What ran in production.** The checks above, which only read. The full browser suite didn't run there, because it proposes
+and votes for real. The real state during all of this was off shift, so the robot was asleep, and the other six moods have
+only been seen from a mocked state.
+
+**What ran on a real phone.** Nothing. The phone figures use a phone-sized window with the Mac's GPU, and slowing the CPU
+doesn't slow that GPU, so 30 fps on a mid-range phone is unproved.
+
+**What didn't run.** The fallback to the poster at low frame rates is built, and nothing has triggered it. Sound hasn't been
+listened to. No real shift has moved the robot.
 
 **One mistake on the way.** The first build ran three.js on the page's thread. Lighthouse scored 56 with software
 rendering and 68 on a cold visit. See `DECISIONS.md` for what changed.
