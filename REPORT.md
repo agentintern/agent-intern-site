@@ -9,6 +9,36 @@ yet. The history holds labeled rehearsals, a team change and a shift nobody work
 
 Shift 5's rollback is confirmed: `rolled-back` on the site, its pull request closed, and `main` clean.
 
+## The office in 3D, 2026-10-31
+
+**Not in production yet.** This ran on a preview at https://preview.agent-intern.pages.dev, which uses the staging
+database. That database has no shifts, so the drawers show 0 there and four `/proof` links to shift pages return 404. The
+same links return 200 in production. `/play` doesn't load on the preview, because the game only allows the real domain.
+
+| Size | Measured | Budget |
+| --- | --- | --- |
+| JS on the page's own thread, on the home page | 8.3 KB gzipped | 20 KB |
+| 3D, in a worker, with three.js 0.186.1 | 154.2 KB gzipped, 597 KB raw | 200 KB |
+| Poster, 1280 x 800 WebP | 36 KB | |
+| Scene, per frame, shadows included | 188,000 triangles, 169 draw calls | |
+
+| Check | Result |
+| --- | --- |
+| Browser suite on a local stack, Chromium and WebKit | 359 of 359 |
+| Each of the 7 moods from a mocked state, in both browsers | Pass |
+| The pointer, clicks and scrolling leave the mood alone, and a new state from the server changes it | Pass |
+| No usable WebGL, reduced motion and JS off | The poster stays, and the facts and links match the running page |
+| Lighthouse mobile on the preview, default settings | `/` 98 to 100, `/live` 100, `/board` 100, `/proof` 99, `/history` 100, with no blocking time and CLS 0 |
+| Lighthouse mobile on production, the same day | `/` 100, `/live` 100 |
+| Frame rate on an Apple M4, at desktop and phone sizes | 60 fps |
+
+**What didn't run.** No real phone has opened this. The phone figures use a phone-sized window with the Mac's GPU, and
+slowing the CPU doesn't slow that GPU, so 30 fps on a mid-range phone is unproved. The fallback to the poster at low frame
+rates is built, and no test has triggered it. Sound hasn't been listened to.
+
+**One mistake on the way.** The first build ran three.js on the page's thread. Lighthouse scored 56 with software
+rendering and 68 on a cold visit. See `DECISIONS.md` for what changed.
+
 ## Launch night, 2026-10-31
 
 | Check | Result |
@@ -18,7 +48,7 @@ Shift 5's rollback is confirmed: `rolled-back` on the site, its pull request clo
 | Lighthouse mobile on `/`, `/board`, `/proof` and `/play` | Performance 99 to 100, the other three 100, CLS 0.009 at most |
 | JS on the home page | 8.2 KB gzipped, budget 100 KB |
 | Game | 18.4 KB gzipped, budget 500 KB |
-| Unit tests | Site 203, shift tools 68, gate 70, game 30 |
+| Unit tests | Site 207, shift tools 68, gate 70, game 30 |
 | Attacks from inside the container, from a clean clone of the public repo | 49 of 49 |
 | The mint switch on staging, with a made-up mint in a temporary copy | TEST MODE off, `/token` on, chip on. Sign-in stops with a plain message, because reads fail for a mint that doesn't exist. |
 | Passes with a mint set, over a mock RPC | Tested in `test/live-mode.test.ts`, and not on staging. See `DECISIONS.md`. |
