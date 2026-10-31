@@ -1,0 +1,22 @@
+{
+  "name": "agent-intern-shift",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Commands a person runs to open a shift. Nothing here starts on its own.",
+  "type": "module",
+  "scripts": {
+    "shift:start": "node bin/start.mjs",
+    "shift:open": "node bin/open.mjs",
+    "shift:finish": "node bin/finish.mjs",
+    "shift:pause": "node bin/pause.mjs",
+    "shift:status": "node bin/status.mjs",
+    "setup": "node scripts/setup.mjs",
+    "test": "node --test test/*.test.mjs",
+    "test:container": "node test/container.mjs",
+    "check:no-unattended": "node scripts/check-no-unattended.mjs",
+    "shift:team": "node bin/team.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

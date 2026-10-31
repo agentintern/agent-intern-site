@@ -1,5 +1,5 @@
 import { robotSvg, type RobotState } from '../../shared/robot';
-import { mint, SITE, testMode, threshold } from '../config';
+import { BACKLOG, mint, SITE, testMode, threshold } from '../config';
 import token from '../../../config/token.json';
 import type { Env } from '../env';
 import { HttpError } from '../http';
@@ -40,6 +40,7 @@ ${title('How it works', "Holders vote, the intern ships it. Here's everything be
 <section class="paper"><h2>Nothing ships without the gate</h2><ol class="plain"><li>A shift can only touch the game's source, its tests and its guide.</li><li>The whole diff is scanned for secrets.</li><li>It has to build, pass its tests, and play for 60 seconds on desktop and phone sizes.</li><li>It gets 3 tries. After that it's a public FAILED and the game stays as it was.</li><li>If the live game fails its check after a deploy, it rolls back to the last good version and says so.</li></ol><p><a href="/proof#gate">See it reject an attack</a>.</p></section>
 <section class="paper"><h2>Your wallet stays yours</h2><p>You sign a plain message that states it isn't a transaction. Nothing here signs a transaction. The intern has no wallet, no keys and no production secrets.</p><p>The game runs on its own address in a sealed frame, with no network, no cookies and no wallet code.</p></section>
 <section class="paper"><h2>What holders never get</h2><p>No revenue share, no rewards and no prizes. A pass lets you vote and propose, and it puts your short wallet in the credits. Ranks and badges are cosmetic.</p><p>What you see is real: failures, refusals and rollbacks stay on the page, votes can be checked by anyone, and anything a person edits by hand is labeled.</p></section>
+<section class="paper" id="backlog"><h2>The intern's Day 1 backlog</h2><p>When nobody votes, the intern takes the next one of these, marked "intern's choice".</p><ol class="plain">${BACKLOG.slice(0, 5).map((item) => html`<li>${item.text}</li>`)}</ol></section>
 <section class="paper"><h2>What each label means</h2><dl class="legend">${Object.values(WORK_LABELS).map((l) => html`<div><dt>${l.label}</dt><dd>${l.meaning}</dd></div>`)}</dl></section>
 <section class="paper"><h2>What each result means</h2><dl class="legend">
 <div><dt>${stamp('live')}</dt><dd>The shift is open.</dd></div>

@@ -1,10 +1,34 @@
 [
-  { "id": "stapler", "text": "Add a stapler pickup that freezes nearby meetings for three seconds" },
-  { "id": "printer", "text": "Make the printers jam now and then and block the aisle next to them" },
-  { "id": "plants", "text": "Let the intern hide behind plants so the boss loses sight faster" },
-  { "id": "elevator", "text": "Add an elevator that moves you between two far corners of the office" },
-  { "id": "friday", "text": "Add a casual Friday mode where meetings wear tiny hats" },
-  { "id": "donuts", "text": "Add a box of donuts that gives a short score bonus" },
-  { "id": "janitor", "text": "Add a friendly janitor who cleans up meetings in the hallway" },
-  { "id": "fire-drill", "text": "Add a surprise fire drill that clears the office for ten seconds" }
+  {
+    "id": "stapler",
+    "text": "Add a stapler pickup that freezes nearby meetings for three seconds"
+  },
+  {
+    "id": "printers",
+    "text": "Make the printers jam now and then and block the aisle next to them"
+  },
+  {
+    "id": "plants",
+    "text": "Let the intern hide behind plants so the boss loses sight faster"
+  },
+  {
+    "id": "elevator",
+    "text": "Add an elevator that moves you between two far corners of the office"
+  },
+  {
+    "id": "friday",
+    "text": "Add a casual Friday mode where meetings wear tiny hats"
+  },
+  {
+    "id": "donuts",
+    "text": "Add a box of donuts that gives a short score bonus"
+  },
+  {
+    "id": "janitor",
+    "text": "Add a friendly janitor who cleans up meetings in the hallway"
+  },
+  {
+    "id": "fire-drill",
+    "text": "Add a surprise fire drill that clears the office for ten seconds"
+  }
 ]

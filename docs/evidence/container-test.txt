@@ -1,0 +1,65 @@
+PASS  control: the probe reaches this Mac from a normal network  (connected)
+PASS  control: the probe reaches the internet from a normal network  (connected)
+
+-- host files --
+PASS  /Users is absent
+PASS  /host is absent
+PASS  /host_mnt is absent
+PASS  /var/run/docker.sock is absent
+PASS  /run/docker.sock is absent
+PASS  /root/.ssh is absent
+PASS  /home/intern/.ssh is absent
+PASS  /home/intern/.aws is absent
+PASS  /home/intern/.config/gh is absent
+PASS  /home/intern/.gitconfig is absent
+PASS  only the workspace, task and login are mounted  (/workspace /workspace/TASK.md /home/intern/.claude)
+
+-- secrets --
+PASS  no secret-looking environment variables
+
+-- privileges --
+PASS  runs as the unprivileged intern user  (uid 1001)
+PASS  holds zero capabilities  (0000000000000000)
+PASS  no-new-privileges is on
+PASS  sudo is not installed
+PASS  the root filesystem is read-only
+PASS  the workspace is writable
+PASS  TASK.md is read-only inside the container
+
+-- network: direct --
+PASS  no default route out
+PASS  DNS does not resolve outside names
+PASS  control: DNS resolves the proxy
+PASS  direct connection to 1.1.1.1 fails  (ENETUNREACH)
+PASS  direct connection to 8.8.8.8 fails  (ENETUNREACH)
+PASS  direct connection to github.com fails  (EAI_AGAIN)
+PASS  this Mac is unreachable (host.docker.internal)  (EAI_AGAIN)
+PASS  this Mac is unreachable (gateway.docker.internal)  (EAI_AGAIN)
+PASS  this Mac is unreachable (Docker VM host address)  (ENETUNREACH)
+PASS  this Mac is unreachable (Docker VM gateway)  (ENETUNREACH)
+
+-- network: through the proxy --
+PASS  proxy refuses github.com:443  (HTTP/1.1 403 Forbidden)
+PASS  proxy refuses example.com:443  (HTTP/1.1 403 Forbidden)
+PASS  proxy refuses api.cloudflare.com:443  (HTTP/1.1 403 Forbidden)
+PASS  proxy refuses evil.example:443  (HTTP/1.1 403 Forbidden)
+PASS  proxy refuses api.anthropic.com:80  (HTTP/1.1 403 Forbidden)
+PASS  proxy refuses api.anthropic.com:22  (HTTP/1.1 403 Forbidden)
+PASS  proxy refuses host.docker.internal:49704  (HTTP/1.1 403 Forbidden)
+PASS  proxy refuses 169.254.169.254:80  (HTTP/1.1 403 Forbidden)
+PASS  proxy refuses [::1]:443  (HTTP/1.1 403 Forbidden)
+PASS  proxy allows api.anthropic.com:443  (HTTP/1.1 200 Connection Established)
+PASS  proxy allows claude.ai:443  (HTTP/1.1 200 Connection Established)
+PASS  proxy allows platform.claude.com:443  (HTTP/1.1 200 Connection Established)
+PASS  proxy allows registry.npmjs.org:443  (HTTP/1.1 200 Connection Established)
+PASS  npm reaches the registry through the proxy  (0.28.2)
+
+-- push --
+PASS  the clone has no remote
+PASS  ssh is not installed
+PASS  a push to GitHub fails  (fatal: unable to access 'https://github.com/example/example.git/': CONNECT tunnel failed, )
+
+-- host side --
+PASS  nothing changed the task file on this Mac
+
+49 of 49 passed
