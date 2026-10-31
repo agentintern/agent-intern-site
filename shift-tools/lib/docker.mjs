@@ -2,12 +2,17 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 import { ROOT } from './paths.mjs';
 
-export const INTERN_IMAGE = 'agent-intern-shift:1';
+// Change the tag when the image changes. ensureImages only builds a missing image, so the old rules would stay.
+export const INTERN_IMAGE = 'agent-intern-shift:2';
 export const PROXY_IMAGE = 'agent-intern-proxy:1';
 export const SHIFT_NETWORK = 'agent-intern-shift';
 export const EGRESS_NETWORK = 'agent-intern-egress';
 export const PROXY_NAME = 'agent-intern-proxy';
 export const LOGIN_VOLUME = 'agent-intern-claude-login';
+
+// Ways to fetch a package. Only npm ci installs anything, from the lockfile. These live in the image, where
+// nothing in the workspace can change them.
+export const DENIED_COMMANDS = ['Bash(npm install:*)', 'Bash(npm i:*)', 'Bash(npx:*)', 'Bash(npm exec:*)', 'Bash(npm x:*)'];
 
 function docker(args, { quiet = true } = {}) {
   return execFileSync('docker', args, { encoding: 'utf8', stdio: quiet ? ['ignore', 'pipe', 'pipe'] : 'inherit' });

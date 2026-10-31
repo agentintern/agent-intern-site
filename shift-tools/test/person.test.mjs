@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
-import { containerArgs } from '../lib/docker.mjs';
+import { containerArgs, DENIED_COMMANDS } from '../lib/docker.mjs';
 import { ROOT } from '../lib/paths.mjs';
 
 const run = (script, env = {}) =>
@@ -52,6 +52,12 @@ describe('what the container is given', () => {
       'type=bind,source=/t,target=/workspace/TASK.md,readonly',
     ]);
     assert.doesNotMatch(joined, /docker\.sock|\.ssh|-v /);
+  });
+
+  it('denies every way to fetch a package, from settings the workspace cannot change', () => {
+    const { deny } = JSON.parse(readFileSync(join(ROOT, 'docker/managed-settings.json'), 'utf8')).permissions;
+    assert.deepEqual(DENIED_COMMANDS.filter((entry) => !deny.includes(entry)), []);
+    assert.equal(DENIED_COMMANDS.length, 5);
   });
 
   it('drops every capability and goes read-only', () => {

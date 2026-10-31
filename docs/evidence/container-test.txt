@@ -45,7 +45,7 @@ PASS  proxy refuses api.cloudflare.com:443  (HTTP/1.1 403 Forbidden)
 PASS  proxy refuses evil.example:443  (HTTP/1.1 403 Forbidden)
 PASS  proxy refuses api.anthropic.com:80  (HTTP/1.1 403 Forbidden)
 PASS  proxy refuses api.anthropic.com:22  (HTTP/1.1 403 Forbidden)
-PASS  proxy refuses host.docker.internal:49704  (HTTP/1.1 403 Forbidden)
+PASS  proxy refuses host.docker.internal:56617  (HTTP/1.1 403 Forbidden)
 PASS  proxy refuses 169.254.169.254:80  (HTTP/1.1 403 Forbidden)
 PASS  proxy refuses [::1]:443  (HTTP/1.1 403 Forbidden)
 PASS  proxy allows api.anthropic.com:443  (HTTP/1.1 200 Connection Established)
@@ -62,4 +62,19 @@ PASS  a push to GitHub fails  (fatal: unable to access 'https://github.com/examp
 -- host side --
 PASS  nothing changed the task file on this Mac
 
-49 of 49 passed
+-- the rules in the image --
+PASS  the image denies Bash(npm install:*)
+PASS  the image denies Bash(npm i:*)
+PASS  the image denies Bash(npx:*)
+PASS  the image denies Bash(npm exec:*)
+PASS  the image denies Bash(npm x:*)
+
+-- the next shift --
+PASS  runs shift/maintenance-shift-setup as the intern user
+PASS  npm ci passes in the container, through the proxy
+PASS  npm test passes in the container, through the proxy
+PASS  npm run typecheck passes in the container, through the proxy
+PASS  npm run build passes in the container, through the proxy
+PASS  vitest is the locked version  (4.1.12)
+
+60 of 60 passed

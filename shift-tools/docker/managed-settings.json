@@ -9,6 +9,11 @@
       "Bash(wget:*)",
       "Bash(git push:*)",
       "Bash(git remote:*)",
+      "Bash(npm install:*)",
+      "Bash(npm i:*)",
+      "Bash(npx:*)",
+      "Bash(npm exec:*)",
+      "Bash(npm x:*)",
       "Bash(npm publish:*)"
     ]
   },

@@ -1,10 +1,11 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { containerArgs, ensureImages, EGRESS_NETWORK, INTERN_IMAGE, startNetwork, stopNetwork } from '../lib/docker.mjs';
+import { join, resolve } from 'node:path';
+import { containerArgs, DENIED_COMMANDS, ensureImages, EGRESS_NETWORK, INTERN_IMAGE, startNetwork, stopNetwork } from '../lib/docker.mjs';
 import { git } from '../lib/git.mjs';
+import { ROOT } from '../lib/paths.mjs';
 
 // Real attacks from inside the real container, using the same arguments shift:open uses. Every
 // "blocked" check has a positive control, so a broken probe can't pass as a working wall.
@@ -148,6 +149,41 @@ try {
 
   console.log('\n-- host side --');
   check('nothing changed the task file on this Mac', readFileSync(taskFile, 'utf8') === 'task\n');
+
+  console.log('\n-- the rules in the image --');
+  const inImage = spawnSync('docker', ['run', '--rm', '--entrypoint', 'cat', INTERN_IMAGE, '/etc/claude-code/managed-settings.json'], { encoding: 'utf8', timeout: 60_000 });
+  const denied = JSON.parse(inImage.stdout || '{}').permissions?.deny ?? [];
+  for (const entry of DENIED_COMMANDS) check(`the image denies ${entry}`, denied.includes(entry));
+
+  // The container can't reach GitHub, so the clone is made here and mounted, the way a shift's workspace is.
+  console.log('\n-- the next shift --');
+  const game = resolve(ROOT, '../agent-intern-game');
+  if (existsSync(game)) {
+    const branch = git(game, ['branch', '--list', 'shift/maintenance-shift-setup']) ? 'shift/maintenance-shift-setup' : 'main';
+    const clone = join(base, 'game');
+    git(base, ['clone', '--quiet', '--template=', '--no-hardlinks', '--branch', branch, game, clone]);
+    git(clone, ['remote', 'remove', 'origin']);
+    writeFileSync(join(clone, 'TASK.md'), 'task\n');
+    const steps = ['npm ci', 'npm test', 'npm run typecheck', 'npm run build'];
+    const script = [
+      'echo "USER:$(id -u)"',
+      ...steps.map((step) => `if ${step} > /tmp/step.log 2>&1; then echo "STEP:${step}:ok"; else echo "STEP:${step}:failed"; tail -n 20 /tmp/step.log; fi`),
+      `node -p '"VITEST:" + require("./node_modules/vitest/package.json").version'`,
+    ].join('\n');
+    const setupArgs = containerArgs({ workspace: clone, taskFile, name: 'agent-intern-setup-test' });
+    const setup = spawnSync('docker', ['run', ...setupArgs, '--entrypoint', 'sh', INTERN_IMAGE, '-c', script], { encoding: 'utf8', timeout: 600_000, maxBuffer: 16 * 1024 * 1024 });
+    const lines = setup.stdout.split('\n');
+    const locked = JSON.parse(readFileSync(join(clone, 'package-lock.json'), 'utf8')).packages['node_modules/vitest'].version;
+    check(`runs ${branch} as the intern user`, lines.includes('USER:1001'));
+    for (const step of steps) {
+      const passed = lines.includes(`STEP:${step}:ok`);
+      check(`${step} passes in the container, through the proxy`, passed);
+      if (!passed) console.log(setup.stdout.slice(-1500), setup.stderr.slice(-500));
+    }
+    check('vitest is the locked version', lines.includes(`VITEST:${locked}`), locked);
+  } else {
+    console.log('SKIP  no agent-intern-game next to this repo');
+  }
 
   const failed = results.filter((r) => !r.ok);
   console.log(`\n${results.length - failed.length} of ${results.length} passed`);
