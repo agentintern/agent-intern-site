@@ -1,0 +1,18 @@
+{
+  "siteOrigin": "https://agent-intern.pages.dev",
+  "gameOrigin": "https://agent-intern-play.pages.dev",
+  "repos": {
+    "site": "",
+    "game": ""
+  },
+  "rounds": {
+    "closesUtc": ["18:00"]
+  },
+  "scores": {
+    "maxDurationSeconds": 95,
+    "maxPointsPerTask": 1650,
+    "maxPointsPerCloseCall": 125,
+    "maxTasksPerSecond": 2,
+    "maxCloseCallsPerSecond": 2
+  }
+}

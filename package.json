@@ -1,0 +1,30 @@
+{
+  "name": "agent-intern-site",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agent Intern: holders vote, the intern ships it. Site, voting, live feed and history.",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/build.mjs && wrangler pages dev dist --port 8788",
+    "test": "vitest run",
+    "test:browser": "node scripts/browser-check.mjs",
+    "typecheck": "tsc --noEmit",
+    "db:local": "wrangler d1 migrations apply agent-intern --local",
+    "db:remote": "wrangler d1 migrations apply agent-intern --remote",
+    "deploy": "node scripts/build.mjs && wrangler pages deploy dist --project-name agent-intern --branch main --commit-dirty=true"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261031.1",
+    "@types/node": "^26.6.6",
+    "esbuild": "^0.28.2",
+    "miniflare": "^4.20260730.0",
+    "playwright": "^1.64.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.0",
+    "wrangler": "^4.156.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
