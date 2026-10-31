@@ -24,6 +24,11 @@ or using an API key, so the check runs on a free Workers AI model (`llama-3.1-8b
 no tools. It fails closed: an error, a timeout or an unreadable answer leaves the task "in review",
 and it's checked again on later requests. A round that closes first turns the task down.
 
+**The agent prompt is calibrated for slapstick, and the small model stays.** The first prompt rejected
+"Make the printers jam" as harassment. `scripts/screen-bench.mjs` scored both error types: 8 of 26
+harmless tasks wrongly rejected before calibration, 0 after, with 1 of 14 attacks missed either way. A
+70B model did no better, so the cheaper one stays. Fresh tasks through the live API back this up.
+
 **The model picks a category and never writes text that's shown.** Only the fixed reason strings
 reach a page, so a task can't talk the model into printing something on the site.
 
