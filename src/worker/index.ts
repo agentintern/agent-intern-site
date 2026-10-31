@@ -277,6 +277,7 @@ async function postRoute(request: Request, env: Env, ctx: Ctx, url: URL, origin:
     );
   }
   if (pathname === '/api/auth/sign-out') {
+    await rateLimit(env, 'sign-out', clientIp(request), 30, MINUTE);
     await dropSession(env, request);
     return json({ ok: true }, { headers: { 'set-cookie': CLEAR_COOKIE } });
   }
@@ -286,7 +287,10 @@ async function postRoute(request: Request, env: Env, ctx: Ctx, url: URL, origin:
   if (pathname === '/api/scores') return json(await submitScore(env, request, await readJson(request)));
   if (pathname === '/api/practice/check') return json(await practiceCheck(env, request, await readJson(request)));
   if (pathname === '/api/push/subscribe') return json(await subscribePush(env, request, await readJson(request)));
-  if (pathname === '/api/push/unsubscribe') return json(await unsubscribePush(env, await readJson(request)));
+  if (pathname === '/api/push/unsubscribe') {
+    await rateLimit(env, 'push-off', clientIp(request), 10, 10 * MINUTE);
+    return json(await unsubscribePush(env, await readJson(request)));
+  }
   if (pathname === '/api/test/balance' && testMode()) {
     const body = await readJson<{ balance?: unknown }>(request);
     return json(await setTestBalance(env, request, body.balance));
