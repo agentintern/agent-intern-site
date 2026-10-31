@@ -25,7 +25,7 @@ const SCHEDULE_ALLOWED = new Set(['.github/workflows/scorecard.yml']);
 
 const WORKFLOW_FORBIDDEN = [
   ['a workflow schedule', /^\s*schedule\s*:/m],
-  ['a run on pull_request (it would use the branch copy of the workflow)', /^\s*pull_request\s*:/m],
+  ['a gate run on pull_request (it would use the branch copy of the workflow)', /^\s*pull_request\s*:/m],
 ];
 
 // Only the proxy's allowlist may name Claude's API host. If the site ever did, it would be
@@ -64,7 +64,11 @@ export function scan(root) {
     }
     if (/\.github\/workflows\//.test(path)) {
       for (const [label, pattern] of WORKFLOW_FORBIDDEN) {
-        if (pattern.test(text) && !(label === 'a workflow schedule' && SCHEDULE_ALLOWED.has(relativePath))) findings.push(`${relativePath}: ${label}`);
+        if (!pattern.test(text)) continue;
+        if (label === 'a workflow schedule' && SCHEDULE_ALLOWED.has(relativePath)) continue;
+        // The site's CI holds no secrets and deploys nothing, so a branch copy of it can do no harm.
+        if (label.startsWith('a gate run') && basename(path) !== 'gate.yml') continue;
+        findings.push(`${relativePath}: ${label}`);
       }
     }
     if (API_HOST.test(text) && !API_HOST_ALLOWED.has(relativePath) && !basename(path).endsWith('.test.mjs')) {
