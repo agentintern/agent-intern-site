@@ -30,6 +30,8 @@ document.addEventListener('click', (event) => {
 const hooks: (() => void)[] = [tickClocks];
 
 async function boot(): Promise<void> {
+  // For recording a video. It changes no data and only puts a label on the screen.
+  if (new URLSearchParams(location.search).get('demo') === '1') document.body.dataset.demo = '1';
   tickClocks();
   setInterval(tickClocks, 1000);
   const page = document.body.dataset.page;

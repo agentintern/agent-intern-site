@@ -292,6 +292,8 @@ td.num, th.num { text-align: right; }
 
 .day-one { margin: 12px 0 0; padding: 10px 12px; border-left: 3px solid var(--tie, #d7392f); background: rgba(0, 0, 0, 0.05); }
 
+body[data-demo]::after { content: 'DEMO RECORDING. Sample tasks are practice data.'; position: fixed; z-index: 40; left: 8px; right: 8px; top: 34px; padding: 4px 8px; background: var(--tie, #d9402f); color: #fff; font: 600 0.75rem/1.4 var(--mono); text-align: center; pointer-events: none; }
+
 /* The lights come on when a shift starts. */
 body::before { content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0; transition: opacity 1.4s ease-out; background: radial-gradient(70% 55% at 50% 0, rgba(255, 170, 80, 0.2), transparent 70%); }
 body[data-shift="on"]::before { opacity: 1; }
