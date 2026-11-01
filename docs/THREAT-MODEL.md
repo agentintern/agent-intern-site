@@ -13,7 +13,7 @@ Someone who can write tasks, and who assumes the model will do whatever a task s
 | Attack | What stops it | If that fails |
 | --- | --- | --- |
 | A task tells the intern to change its rules | `CLAUDE.md` says tasks are untrusted, and a person approves actions | The gate fails anything outside `src/`, `tests/` and `GAME.md` |
-| The intern is tricked into stealing secrets | The container has none. Tested with `shift-tools/test/container.mjs` | The network is deny-by-default through an allowlist proxy |
+| The intern is tricked into stealing secrets | The container has no wallet, no deploy keys, and no site or gate secrets, tested with `shift-tools/test/container.mjs`. The only credential inside is the Claude login, in `/home/intern/.claude`. It reaches the person's Claude account: model use, profile, sessions, MCP servers and file uploads. It doesn't reach GitHub, Cloudflare, the site or a wallet. The gate's deploy secrets live on GitHub, behind `main`, and a shift can't reach them | The network is deny-by-default. The proxy allows only Anthropic (`api.anthropic.com`, `claude.ai`, `platform.claude.com`) and the npm registry |
 | It writes code that calls out from the game | Diff rules | `connect-src 'none'` and the sandbox, which the shift can't touch |
 | It edits the gate | The gate runs from `main` through `pull_request_target` | Diff rules fail the path |
 | It plants a git hook to run on the host | `shift:finish` never runs git in that folder | Links, nested `.git` folders and odd names are refused |
@@ -98,6 +98,9 @@ What's still true:
 ## What this doesn't protect against
 
 - **A person approving something bad.** The person at the keyboard is part of the model.
+- **The Claude login being taken from inside.** The session has to be able to read it, so a tricked intern could too. It
+  could only leave through hosts the proxy allows, and one of them is the npm registry, where `npm publish` is denied only by
+  command text. Whoever got it could use that Claude account. The person's approval is the check there.
 - **A compromised maintainer machine.** The shift secrets and the deploy key live there.
 - **Prompt injection that stays inside the game.** A task can make the game worse without breaking any rule.
 - **The screen being fooled.** It's a filter, and it has missed a well-known character described without its name.

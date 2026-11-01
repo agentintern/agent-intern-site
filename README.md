@@ -23,7 +23,9 @@ npm run dev        # http://localhost:8788
 
 - **Tasks are data.** A task is text from a stranger. Rules screen it, then a small model with no tools.
   The intern treats what's left as untrusted text and can refuse.
-- **The intern has nothing to steal.** Each shift runs in a container with no secrets and no way to push.
+- **The intern has no wallet, no deploy keys, and no site or gate secrets.** The only credential inside its container is
+  the Claude login, and it has no way to push. The gate's deploy secrets live on GitHub, behind `main`, and a shift can't
+  reach them.
   The network is deny by default. See [shift-tools](shift-tools/).
 - **Nothing ships without the gate.** It runs from `main`, so a shift can't edit it. See the
   [workflow](https://github.com/agentintern/agent-intern-game/blob/main/.github/workflows/gate.yml).
@@ -47,8 +49,9 @@ The last one needs Docker. [/proof](https://agentintern.online/proof) has a comm
 
 ## Honest limits
 
-- No real intern shift has run yet. The game so far was built by the team, and everything in the history is a
-  labeled rehearsal, a team change or a shift nobody worked.
+- The team built most of the game. [/history](https://agentintern.online/history) shows how many real intern shifts have
+  run, and labels the rehearsals, the team changes and the shift nobody worked.
+- Holder voting hasn't run on real balances.
 - Nobody outside the project has reviewed this. There has been no audit.
 - The terminal check in the shift tools stops cron, CI and pipes, but a pseudo-terminal could pass it.
 - The screening can be fooled. A person still reads each task, the intern can refuse, and the gate and the
