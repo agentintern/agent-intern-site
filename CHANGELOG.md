@@ -2,6 +2,13 @@
 
 The game's versions are at https://agentintern.online/changelog. This file covers the site.
 
+## Two public claims, 2026-11-01
+
+- /proof and /about now take what's still open from the real shift count. They said no real shift had run after shift 8.
+- Said plainly what the intern holds: no wallet, no deploy keys, and no site or gate secrets. The only credential inside the
+  container is the Claude login, and the gate's deploy secrets live on GitHub, behind main.
+- Added to the threat model what the Claude login reaches, and that the proxy allows Anthropic and the npm registry.
+
 ## Stop when blocked, 2026-10-31
 
 - Added to /proof's container claim: in shift 8 the intern went around a deny rule on npm install, and deny rules only slow

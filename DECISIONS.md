@@ -243,3 +243,10 @@ can still get to the same place. The real limits stay the empty container, the p
 
 **The container test clones the game outside the container.** The container can't reach GitHub by design, so the clone is
 made on the host and mounted, the way a shift's workspace is. `npm ci` itself runs inside, through the proxy.
+
+**"The intern has nothing to steal" came off the site.** The Claude login is a credential, and the session has to be able to
+read it. The site now says what the intern doesn't hold, names the login, and says where the gate's secrets live. The threat
+model says what the login reaches and how it could leave.
+
+**The open items on /proof and /about come from the shift count, and from TEST MODE.** They were fixed text, and they said no
+real shift had run after shift 8 shipped. The voting line goes away when TEST MODE ends, so it can't go stale the same way.

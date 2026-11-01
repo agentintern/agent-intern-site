@@ -9,6 +9,29 @@ before it is a labeled rehearsal, a team change or a shift nobody worked. See [W
 
 Shift 5's rollback is confirmed: `rolled-back` on the site, its pull request closed, and `main` clean.
 
+## Two public claims, 2026-11-01
+
+Reviews read two things on the live site that didn't match the facts. `/proof` and `/about` said no real intern shift had
+run, after shift 8 shipped. And the site said the intern had "no keys" and "no secrets", with the Claude login inside the
+container.
+
+| Check | Where | Result |
+| --- | --- | --- |
+| `/proof` and `/about` with 0 intern shifts and with 1 | Unit tests | Pass, and they failed when the count was ignored on purpose |
+| No page says "no keys", "no production secrets", "nothing to steal" or "secrets to find" | Unit tests over every page | Pass, and it failed when the old `/break` line came back on purpose |
+| Unit tests, type check, lint, secret scan | Local | 209 of 209, and the rest clean |
+| A search of the repo and `launch-kit/` for the old claims | Local | Only lines about something else are left: the live feed, the MCP endpoint, workflow jobs, and the text shown at 0 shifts |
+
+This report went up with the change, so it can't record the site's CI run or the deploy after it. Both are public: the
+Actions tab, and `/proof`.
+
+**Beyond the list in the brief.** "The intern has nothing to steal" came off too, since it's the same imprecision. So did the
+description of `/break`, `README.md` line 50, which also said no real shift had run, and `docs/RUN-YOUR-OWN.md` line 8.
+
+**Still open.** The session can read the Claude login, because it needs it, and no deny rule covers that file. `npm publish` is
+denied only by command text, and the registry is reachable, so the login could leave that way. The threat model says so.
+`/status` stopped showing "Nobody has seen the intern refuse a bad task" when the shift count passed 0, and that's still true.
+
 ## Stop when blocked, 2026-10-31
 
 In shift 8 the intern hit a deny rule and went around it inside the container. There was no damage, and
