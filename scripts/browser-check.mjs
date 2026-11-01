@@ -21,6 +21,41 @@ const check = (label, ok, detail = '') => {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? `  (${detail})` : ''}`);
 };
 
+// On a phone the story scrolls under the stage. Text sliding over the robot is the bug this guards.
+async function phoneStageChecks(browser) {
+  const context = await browser.newContext({ viewport: { width: 402, height: 749 }, deviceScaleFactor: 2 });
+  const page = await context.newPage();
+  await page.goto(`${SITE}/`, { waitUntil: 'load' });
+  const stage = () => page.evaluate(() => {
+    const art = document.getElementById('stage-art').getBoundingClientRect();
+    const cards = [...document.querySelectorAll('.stage-text, .chapter-panel')].map((t) => t.getBoundingClientRect());
+    // The opaque cards are what can cover the robot, so each must end above it or begin below it.
+    const clear = cards.every((r) => r.top >= art.bottom - 1 || r.bottom <= art.top + 1 || getComputedStyle(document.getElementById('stage-art')).zIndex === '2');
+    const hero = document.getElementById('clock-in').getBoundingClientRect();
+    const next = document.getElementById('the-job').getBoundingClientRect();
+    return { clear, height: art.height, spots: [hero.top, hero.height, next.top], cue: document.querySelector('.scroll-cue').getBoundingClientRect().top >= art.bottom };
+  });
+  const before = await stage();
+  check('phone stage: nothing sits over the robot at the top', before.clear && before.cue);
+  check('phone stage: it fits in the upper half of the screen', before.height <= 749 * 0.5, `${before.height} px`);
+  await page.waitForTimeout(4500);
+  const live = await page.evaluate(() => document.getElementById('story').classList.contains('live'));
+  const after = await stage();
+  // Boxes count here, not just what can be seen: Lighthouse scores a transparent section that moves.
+  check('phone stage: turning on the 3D doesn\'t move the page', after.spots.join() === before.spots.join(), `${before.spots} then ${after.spots}`);
+  if (live) {
+    await page.evaluate(() => window.scrollTo(0, 260));
+    await page.waitForTimeout(300);
+    const scrolled = await page.evaluate(() => {
+      const art = document.getElementById('stage-art').getBoundingClientRect();
+      const hit = document.elementFromPoint(art.left + art.width / 2, art.top + art.height / 2);
+      return { pinned: art.top === 0, onStage: Boolean(hit?.closest('#stage-art')) };
+    });
+    check('phone stage: the story scrolls under it, not over it', scrolled.pinned && scrolled.onStage);
+  }
+  await context.close();
+}
+
 const PAGES = ['/', '/play', '/board', '/practice', '/live', '/history', '/hr', '/break', '/promotions', '/how', '/proof', '/proof/sandbox', '/about', '/status', '/changelog', '/security', '/brand', '/api'];
 const BANNED_WORDS = /\b(token|tokens|mint|solscan|contract address|buyback|buybacks|airdrop)\b/i;
 const BANNED_CLAIMS = /\bautonomous\b|24\/7|runs by itself|\baudited\b|guaranteed|ai-powered security/i;
@@ -185,6 +220,7 @@ function factsIn(html) {
 
 async function officeChecks(browser) {
   console.log('\n-- the office in 3D --');
+  await phoneStageChecks(browser);
   const problems = [];
   const open = async (options = {}, script) => {
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, ...options });
