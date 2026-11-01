@@ -183,8 +183,12 @@ describe('labels', () => {
     const started = await h.call('/api/shift/start', { bearer: shiftAuth, body: { taskId } });
     const id = started.body.shift.id;
     expect(started.body.shift.worked_by).toBe('intern');
+    const header = (text: string) => text.match(/robot-head[-a-z]*\.webp/)?.[0];
+    expect(header((await page('/')).text)).toBe('robot-head.webp');
     await h.call('/api/shift/finish', { bearer: shiftAuth, body: { shiftId: id, status: 'done' } });
+    expect(header((await page('/')).text)).toBe('robot-head.webp');
     await h.call('/api/gate/event', { bearer: gateAuth, body: { shiftId: id, stage: 'verify', status: 'pass', final: true, version: '0.1.10', commit: 'abcdef2' } });
+    expect(header((await page('/')).text)).toBe('robot-head-asleep.webp');
     expect((await h.call('/api/promotion')).body.shipped).toBe(1);
 
     const proof = (await page('/proof')).text;

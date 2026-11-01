@@ -38,11 +38,29 @@ function shareText(day: number, run: Run): string {
   ].join('\n');
 }
 
+// The cards lean toward the mouse, a little, so they read as things in the room.
+function leanCards(): void {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  let leaning: HTMLElement | null = null;
+  document.addEventListener('pointermove', (event) => {
+    if (event.pointerType !== 'mouse') return;
+    const card = (event.target as Element).closest<HTMLElement>('.paper');
+    if (leaning && leaning !== card) leaning.style.removeProperty('--tilt-x');
+    if (leaning && leaning !== card) leaning.style.removeProperty('--tilt-y');
+    leaning = card;
+    if (!card) return;
+    const box = card.getBoundingClientRect();
+    card.style.setProperty('--tilt-x', ((0.5 - (event.clientY - box.top) / box.height) * 5).toFixed(2));
+    card.style.setProperty('--tilt-y', (((event.clientX - box.left) / box.width - 0.5) * 7).toFixed(2));
+  }, { passive: true });
+}
+
 export function startPlay(): void {
   const frame = need<HTMLIFrameElement>('game');
   const form = need<HTMLFormElement>('score-form');
   const message = byId('score-message');
   let run: Run | null = null;
+  leanCards();
 
   const fixedDay = Number(frame.dataset.day || 0);
   frame.addEventListener('load', () => {

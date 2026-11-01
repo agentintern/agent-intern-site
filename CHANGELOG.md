@@ -2,6 +2,15 @@
 
 The game's versions are at https://agentintern.online/changelog. This file covers the site.
 
+## The header and /play, 2026-11-01
+
+- The header is a lit ledge with raised keys, and the logo is the intern's 3D head, rendered from the site's own scene. It's
+  awake only while a shift is open, like the status pill, and it changes without a reload.
+- /play stands the game in a monitor on a desk, with a floor running away behind it. The cards are dark glass instead of
+  paper, and they lean toward the mouse. With reduced motion they stay still, and on a phone the monitor is a thin edge, so
+  the game keeps its space.
+- /brand now says the robot is drawn in code as pixel art and as a 3D model.
+
 ## The home on a phone, 2026-11-01
 
 - On a phone the stage now stays whole at the top of the screen, and the story scrolls under it. Before, the text cards

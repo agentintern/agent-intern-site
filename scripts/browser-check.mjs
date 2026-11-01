@@ -218,9 +218,53 @@ function factsIn(html) {
   return JSON.stringify({ links: list(/href="([^"]+)"/g), headings: list(/<h[12][^>]*>(.*?)<\/h[12]>/gs), counts: list(/data-count="(\d+)"/g) });
 }
 
+// /play stands the game in a room made of CSS. None of it may come between a player and the game.
+async function playRoomChecks(browser) {
+  const open = async (options) => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, ...options });
+    const page = await context.newPage();
+    await page.goto(`${SITE}/play`, { waitUntil: 'load' });
+    return { context, page };
+  };
+  const hover = async (page) => {
+    const card = page.locator('.office-grid .paper').first();
+    await card.scrollIntoViewIfNeeded();
+    const spot = await card.boundingBox();
+    await page.mouse.move(spot.x + spot.width - 16, spot.y + 16);
+    await page.mouse.move(spot.x + spot.width - 12, spot.y + 14);
+    return card.evaluate((el) => [el.style.getPropertyValue('--tilt-x'), el.style.getPropertyValue('--tilt-y')].join(''));
+  };
+  const desk = await open();
+  const room = await desk.page.evaluate(() => {
+    const game = document.getElementById('game');
+    const box = game.getBoundingClientRect();
+    const head = document.getElementById('brand-head');
+    return {
+      reachable: document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2) === game,
+      flat: getComputedStyle(game).transform === 'none',
+      head: head.complete && head.naturalWidth > 0,
+    };
+  });
+  check('play room: nothing sits over the game, and the game stays flat', room.reachable && room.flat);
+  check('play room: the robot in the header is there', room.head);
+  check('play room: a card leans toward the mouse', (await hover(desk.page)) !== '');
+  await desk.page.mouse.move(4, 4);
+  const flat = await desk.page.locator('.office-grid .paper').first().evaluate((el) => el.style.getPropertyValue('--tilt-x') === '');
+  check('play room: it lands flat when the mouse leaves', flat);
+  await desk.context.close();
+  const still = await open({ reducedMotion: 'reduce' });
+  check('play room: with reduced motion the cards stay still', (await hover(still.page)) === '');
+  await still.context.close();
+  const phone = await open({ viewport: { width: 402, height: 749 } });
+  const fits = await phone.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
+  check('play room: nothing runs off the side of a phone', fits);
+  await phone.context.close();
+}
+
 async function officeChecks(browser) {
   console.log('\n-- the office in 3D --');
   await phoneStageChecks(browser);
+  await playRoomChecks(browser);
   const problems = [];
   const open = async (options = {}, script) => {
     const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, ...options });

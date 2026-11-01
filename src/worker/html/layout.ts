@@ -2,7 +2,6 @@ import ASSETS from '../../../config/assets.json';
 import { SITE, siteOrigin, testMode, mint } from '../config';
 import type { Env } from '../env';
 import { html, raw, type Safe } from './core';
-import { robotSvg } from '../../shared/robot';
 
 export interface Page {
   path: string;
@@ -92,7 +91,7 @@ ${page.noindex ? raw('<meta name="robots" content="noindex">') : ''}
 ${state.paused ? html`<div class="notice" role="status">Paused: ${state.paused}</div>` : ''}
 <header class="top">
 <div class="wrap top-row">
-<a class="brand" href="/" aria-label="Agent Intern, the office">${raw(robotSvg(state.on ? 'working' : 'asleep'))}<span>Agent Intern</span></a>
+<a class="brand" href="/" aria-label="Agent Intern, the office"><img class="brand-head" id="brand-head" data-live="brand-head" src="/img/robot-head${state.on ? '' : '-asleep'}.webp" width="40" height="40" alt=""><span>Agent Intern</span></a>
 <a class="pill${state.on ? ' on' : ''}${state.paused ? ' paused' : ''}" href="/live" data-live="pill" id="pill"><i aria-hidden="true"></i>${state.label}</a>
 ${mintChip()}
 <nav aria-label="Main" class="top-nav"><ul>${nav}</ul></nav>

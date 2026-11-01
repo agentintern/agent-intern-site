@@ -255,3 +255,9 @@ real shift had run after shift 8 shipped. The voting line goes away when TEST MO
 which works on a wide screen, where they sit side by side, and covers the robot on a narrow one. A person found this on a real
 phone. The art is the same height with or without the 3D, so the page doesn't move when it starts, and a phone on its side
 lets the stage scroll away, because it has no room to keep one. The canvas is also under half the size it was.
+
+**The header's robot is a still, and the room around the game is CSS.** The head is rendered once from the home page's scene,
+by the script that makes the posters, so every page pays 5 KB for it instead of loading 3D. /play doesn't run a second WebGL
+scene beside the game either. The frame itself is never transformed: only the bezel, desk and floor around it are. A browser
+check proves nothing sits over the game, so the room can't take a player's clicks. The cards lean on the mouse only, because
+a phone has no pointer to lean toward.

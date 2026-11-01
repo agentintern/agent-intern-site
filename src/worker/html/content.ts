@@ -267,7 +267,7 @@ export async function brandPage(env: Env): Promise<Rendered> {
     description: 'The robot intern, its states, the colors and the logo files.',
     state: shiftLine(o),
     body: html`
-${title('Brand', 'The robot intern is original pixel art, drawn in code. It has no connection to any real brand.')}
+${title('Brand', 'The robot intern is original, drawn in code as pixel art and as a 3D model. It has no connection to any real brand.')}
 <section class="paper"><h2>The intern's moods</h2><ul class="robots">${STATES.map((s) => html`<li>${raw(robotSvg(s, `The robot intern, ${s}`))}<span>${s}</span></li>`)}</ul></section>
 <div class="office-grid">
 <section class="paper"><h2>Colors</h2><ul class="swatches">${colors.map(([n, c]) => html`<li><span class="swatch sw-${n.toLowerCase()}" aria-hidden="true"></span>${n} ${c}</li>`)}</ul></section>

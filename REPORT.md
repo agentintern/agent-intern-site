@@ -9,6 +9,20 @@ before it is a labeled rehearsal, a team change or a shift nobody worked. See [W
 
 Shift 5's rollback is confirmed: `rolled-back` on the site, its pull request closed, and `main` clean.
 
+## The header and /play, 2026-11-01
+
+A person asked for a header with more depth and a less solid /play. Deployment `0f31faf2`, measured on production after it
+went live, with the shipped game (`v0.1.12`) running inside the monitor.
+
+| Page | Phone | Desktop | Accessibility | CLS, phone and desktop |
+| --- | --- | --- | --- | --- |
+| `/play` | 99 | 100 | 100 | 0.0088 and 0.0038 |
+| `/` | 100 | 100 | 100 | 0.0001 and 0 |
+
+Browser suite 379 of 379 in Chromium and WebKit, with 12 new checks. Unit tests 209 of 209. Nothing has been seen on a real
+phone yet, and neither has the robot's awake head during a real shift. A unit test covers that it follows the shift, and it
+stays awake through the gate, as the status pill does.
+
 ## The first real phone, 2026-11-01
 
 A person played the game on a real phone and said it feels good. It's the first time anything here ran on one. The same person

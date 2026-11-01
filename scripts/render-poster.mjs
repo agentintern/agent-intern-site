@@ -6,7 +6,8 @@ import { build } from 'esbuild';
 import { chromium } from 'playwright';
 
 // Renders the pictures of the robot from the same scene the page runs, so they can't drift apart: the first-paint poster,
-// the 404 still and the share card. It needs a real GPU. Run it by hand after a change to the scene: npm run poster
+// the 404 still, the share card and the head in the header. It needs a real GPU. Run it by hand after a change to the
+// scene: npm run poster. Name some, as in npm run poster head, to render only those.
 const work = mkdtempSync(join(tmpdir(), 'poster-'));
 const entry = join(work, 'entry.ts');
 writeFileSync(entry, `
@@ -31,6 +32,15 @@ function bitmap(ctx, value, x, y, scale, color) {
     });
     at += 6 * scale;
   }
+}
+
+async function head(host, pose) {
+  const { office, canvas } = await open(host);
+  office.still(pose);
+  settle(office, 3000);
+  office.look(1.5, 6.75, 7.6, -0.14, 6.32, 0, 13.5);
+  office.draw(4000, 0);
+  return canvas.toDataURL('image/webp', 0.86);
 }
 
 const views = {
@@ -68,6 +78,8 @@ const views = {
     return card.toDataURL('image/jpeg', 0.9);
   },
 };
+views.head = (host) => head(host, 'rest');
+views.headAsleep = (host) => head(host, 'asleep');
 window.render = (name) => views[name](document.getElementById('host'));
 `);
 await build({ entryPoints: [entry], bundle: true, format: 'esm', outfile: join(work, 'poster.js'), target: 'es2022', logLevel: 'error' });
@@ -82,7 +94,9 @@ const server = createServer((request, response) => {
   response.end('<!doctype html><style>body{margin:0}#host{width:100vw;height:100vh}canvas{display:block}</style><div id="host"></div><script type="module" src="/poster.js"></script>');
 }).listen(0);
 const browser = await chromium.launch({ args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
-for (const [name, file, width, height] of [['poster', 'robot-poster.webp', 1280, 800], ['shrug', 'robot-shrug.webp', 800, 800], ['card', 'share-card.jpg', 1200, 630]]) {
+for (const [name, file, width, height] of [['poster', 'robot-poster.webp', 1280, 800], ['shrug', 'robot-shrug.webp', 800, 800], ['card', 'share-card.jpg', 1200, 630], ['head', 'robot-head.webp', 176, 176], ['headAsleep', 'robot-head-asleep.webp', 176, 176]]) {
+  const only = process.argv.slice(2);
+  if (only.length > 0 && !only.some((pick) => name.startsWith(pick))) continue;
   const page = await browser.newPage({ viewport: { width, height } });
   page.on('pageerror', (error) => console.log(String(error)));
   await page.goto(`http://localhost:${server.address().port}/`);
