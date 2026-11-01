@@ -36,7 +36,7 @@ describe('every page, as a fetch sees it', () => {
       expect(text.startsWith('<!doctype html>')).toBe(true);
       expect(text).not.toMatch(/>Loading\.?</);
       expect((text.match(/<h1/g) ?? []).length).toBe(1);
-      expect(text).toContain('https://x.com/agentinternn');
+      expect(text.match(/<header[\s\S]*<\/header>/)?.[0]).toContain('https://x.com/agentinternn');
       expect(text.replace(/<[^>]+>/g, ' ')).not.toMatch(BANNED);
       expect(text.replace(/<[^>]+>/g, ' ')).not.toMatch(OVERCLAIMS);
       const csp = headers.get('content-security-policy') ?? '';

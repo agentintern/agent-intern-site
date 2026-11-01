@@ -95,6 +95,7 @@ ${state.paused ? html`<div class="notice" role="status">Paused: ${state.paused}<
 <a class="pill${state.on ? ' on' : ''}${state.paused ? ' paused' : ''}" href="/live" data-live="pill" id="pill"><i aria-hidden="true"></i>${state.label}</a>
 ${mintChip()}
 <nav aria-label="Main" class="top-nav"><ul>${nav}</ul></nav>
+<a class="top-x" href="${SITE.x}" aria-label="Agent Intern on X">X</a>
 <button class="sound-toggle" type="button" id="sound-toggle" aria-pressed="false" hidden>Sound off</button>
 </div>
 </header>

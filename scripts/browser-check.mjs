@@ -259,6 +259,20 @@ async function playRoomChecks(browser) {
   const fits = await phone.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
   check('play room: nothing runs off the side of a phone', fits);
   await phone.context.close();
+  const small = await open({ viewport: { width: 360, height: 740 } });
+  const row = await small.page.evaluate(() => {
+    const x = document.querySelector('.top-x').getBoundingClientRect();
+    const head = document.getElementById('brand-head').getBoundingClientRect();
+    return { same: x.top < head.bottom && x.bottom > head.top, inside: x.right <= innerWidth, width: x.width };
+  });
+  check('header: the X key shares the top row on a small phone', row.same && row.inside && row.width >= 40, `${row.width} px`);
+  await small.context.close();
+  for (const width of [720, 768]) {
+    const tablet = await open({ viewport: { width, height: 800 } });
+    const height = await tablet.page.evaluate(() => document.querySelector('.top').getBoundingClientRect().height);
+    check(`header: one row on a ${width} px tablet`, height < 70, `${height} px`);
+    await tablet.context.close();
+  }
 }
 
 async function officeChecks(browser) {

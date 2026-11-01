@@ -10,6 +10,7 @@ The game's versions are at https://agentintern.online/changelog. This file cover
   paper, and they lean toward the mouse. With reduced motion they stay still, and on a phone the monitor is a thin edge, so
   the game keeps its space.
 - /brand now says the robot is drawn in code as pixel art and as a 3D model.
+- Added the X link to the header, on every page and on phones. It was only in the footer.
 
 ## The home on a phone, 2026-11-01
 

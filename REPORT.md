@@ -11,17 +11,18 @@ Shift 5's rollback is confirmed: `rolled-back` on the site, its pull request clo
 
 ## The header and /play, 2026-11-01
 
-A person asked for a header with more depth and a less solid /play. Deployment `0f31faf2`, measured on production after it
-went live, with the shipped game (`v0.1.12`) running inside the monitor.
+A person asked for a header with more depth, a less solid /play, and the X link where people can see it. Deployment
+`59dcb66d`, measured on production after it went live, with the shipped game (`v0.1.12`) running inside the monitor.
 
 | Page | Phone | Desktop | Accessibility | CLS, phone and desktop |
 | --- | --- | --- | --- | --- |
-| `/play` | 99 | 100 | 100 | 0.0088 and 0.0038 |
+| `/play` | 98 | 100 | 100 | 0.0088 and 0.0038 |
 | `/` | 100 | 100 | 100 | 0.0001 and 0 |
 
-Browser suite 379 of 379 in Chromium and WebKit, with 12 new checks. Unit tests 209 of 209. Nothing has been seen on a real
-phone yet, and neither has the robot's awake head during a real shift. A unit test covers that it follows the shift, and it
-stays awake through the gate, as the status pill does.
+`/play` on desktop was measured on the deployment before this one, which changed the header only. Browser suite 385 of 385 in
+Chromium and WebKit, with 18 new checks. Unit tests 209 of 209. The header holds one row from 360 px up, and at 320 px the X key
+drops to a second row. Nothing has been seen on a real phone yet, and neither has the robot's awake head during a real shift.
+A unit test covers that it follows the shift, and it stays awake through the gate, as the status pill does.
 
 ## The first real phone, 2026-11-01
 
