@@ -170,6 +170,13 @@ describe('labels', () => {
     expect((await h.call('/api/promotion')).body.shipped).toBe(0);
   });
 
+  it('says no real intern shift has run while the count is 0', async () => {
+    expect((await page('/proof')).text).toContain('Biggest open item: no real intern shift has run yet.');
+    const { text } = await page('/about');
+    expect(text).toContain('Where things stand: no real intern shift has run yet. The game so far was built by the team');
+    expect(text).not.toContain('real intern shift has run. The team');
+  });
+
   it('counts a real intern shift', async () => {
     await queueTask('A real one');
     const taskId = (await h.call('/api/state')).body.queue[0].id;
@@ -179,6 +186,14 @@ describe('labels', () => {
     await h.call('/api/shift/finish', { bearer: shiftAuth, body: { shiftId: id, status: 'done' } });
     await h.call('/api/gate/event', { bearer: gateAuth, body: { shiftId: id, stage: 'verify', status: 'pass', final: true, version: '0.1.10', commit: 'abcdef2' } });
     expect((await h.call('/api/promotion')).body.shipped).toBe(1);
+
+    const proof = (await page('/proof')).text;
+    expect(proof).toContain("Biggest open item: holder voting hasn't run on real balances.");
+    expect(proof).not.toContain('no real intern shift has run yet');
+    const about = (await page('/about')).text;
+    expect(about).toContain('Where things stand: 1 real intern shift has run. The team built most of the game, and the rehearsals are labeled.');
+    expect(about).toContain("Holder voting hasn't run on real balances yet.");
+    expect(about).not.toContain('no real intern shift has run yet');
   });
 
   it('promotes at the milestones', () => {
@@ -188,6 +203,18 @@ describe('labels', () => {
     expect(promotionLevel(25).title).toBe('Staff');
     expect(promotionLevel(50).title).toBe('CTO');
     expect(promotionLevel(9).next?.title).toBe('Senior');
+  });
+});
+
+describe('what the pages say about the intern', () => {
+  it('never claims it has no keys or no secrets, and names the Claude login', async () => {
+    for (const path of PAGES) {
+      expect((await page(path)).text, path).not.toMatch(/no keys|no production secrets|nothing to steal|secrets to find|no secrets inside|holds no secrets/i);
+    }
+    for (const path of ['/how', '/proof', '/break']) {
+      expect((await page(path)).text, path).toContain('The only credential inside');
+    }
+    expect((await page('/about')).text).toContain('The only credential inside it is the Claude login');
   });
 });
 

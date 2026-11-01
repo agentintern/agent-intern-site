@@ -23,6 +23,16 @@ const passWords = (): string => testMode()
   ? `A pass means holding at least ${threshold().toLocaleString('en-US')} on your balance. In TEST MODE, balances are fake.`
   : `A pass means holding at least ${threshold().toLocaleString('en-US')} of the token in your wallet.`;
 
+// Both come from the real shift count, so they can't go stale the way fixed text did.
+const standing = (intern: number): Safe => (intern === 0
+  ? html`no real intern shift has run yet. The game so far was built by the team, and the pipeline has been tested with labeled rehearsals.`
+  : html`${intern} real intern ${intern === 1 ? 'shift has' : 'shifts have'} run. The team built most of the game, and the rehearsals are labeled.${testMode() ? html` Holder voting hasn't run on real balances yet.` : ''}`);
+
+const openItem = (intern: number): Safe | string => {
+  if (intern === 0) return html`Biggest open item: no real intern shift has run yet.`;
+  return testMode() ? html`Biggest open item: holder voting hasn't run on real balances.` : '';
+};
+
 export async function howPage(env: Env): Promise<Rendered> {
   const o = await overview(env);
   const closes = SITE.rounds.closesUtc.join(' and ');
@@ -38,7 +48,7 @@ ${title('How it works', "Holders vote, the intern ships it. Here's everything be
 <section class="paper"><h2>The workday</h2><p>Each round closes at ${closes} UTC. ${passWords()}</p><ol class="plain"><li>Anyone with a pass can suggest one task per round, up to 120 characters.</li><li>Rules screen it first, then a short agent check. A rejected task shows a plain reason.</li><li>One wallet, one vote, changeable until close. Vote counts stay visible.</li><li>Balances are read again when a round closes. A wallet below the line then doesn't count.</li><li>Most votes wins. A tie goes to the earliest task. With no votes, the intern picks from its own public backlog, marked "intern's choice".</li></ol></section>
 <section class="paper"><h2>Tasks are data, not orders</h2><p>A task is text from a stranger. The intern reads it as a suggestion for the game, and it can't change the intern's rules, tools or scope. The intern may refuse, and a refusal is public.</p><p>Tasks get turned down if they're about:</p><ul class="plain"><li>crypto, wallets, prices, keys, payments, gambling or outside links</li><li>network calls, tracking, or changing the repo, workflows or dependencies</li><li>slurs, sexual content, harassment, real people, real brands or copyrighted characters</li></ul></section>
 <section class="paper"><h2>Nothing ships without the gate</h2><ol class="plain"><li>A shift can only touch the game's source, its tests and its guide.</li><li>The whole diff is scanned for secrets.</li><li>It has to build, pass its tests, and play for 60 seconds on desktop and phone sizes.</li><li>It gets 3 tries. After that it's a public FAILED and the game stays as it was.</li><li>If the live game fails its check after a deploy, it rolls back to the last good version and says so.</li></ol><p><a href="/proof#gate">See it reject an attack</a>.</p></section>
-<section class="paper"><h2>Your wallet stays yours</h2><p>You sign a plain message that states it isn't a transaction. Nothing here signs a transaction. The intern has no wallet, no keys and no production secrets.</p><p>The game runs on its own address in a sealed frame, with no network, no cookies and no wallet code.</p></section>
+<section class="paper"><h2>Your wallet stays yours</h2><p>You sign a plain message that states it isn't a transaction. Nothing here signs a transaction. The intern has no wallet, no deploy keys, and no site or gate secrets. The only credential inside the container is the Claude login. The gate's deploy secrets live on GitHub, behind main, and a shift can't reach them.</p><p>The game runs on its own address in a sealed frame, with no network, no cookies and no wallet code.</p></section>
 <section class="paper"><h2>What holders never get</h2><p>No revenue share, no rewards and no prizes. A pass lets you vote and propose, and it puts your short wallet in the credits. Ranks and badges are cosmetic.</p><p>What you see is real: failures, refusals and rollbacks stay on the page, votes can be checked by anyone, and anything a person edits by hand is labeled.</p></section>
 <section class="paper" id="backlog"><h2>The intern's Day 1 backlog</h2><p>When nobody votes, the intern takes the next one of these, marked "intern's choice".</p><ol class="plain">${BACKLOG.slice(0, 5).map((item) => html`<li>${item.text}</li>`)}</ol></section>
 <section class="paper"><h2>What each label means</h2><dl class="legend">${Object.values(WORK_LABELS).map((l) => html`<div><dt>${l.label}</dt><dd>${l.meaning}</dd></div>`)}</dl></section>
@@ -70,7 +80,7 @@ export async function aboutPage(env: Env): Promise<Rendered> {
 <p>We wanted to try the opposite: a project where you can watch the work happen, tell it what to do next, and go play the result.</p>
 <p>So we hired an intern.</p>
 <p>Agent Intern is an AI agent building a browser game in public, one task at a time. Holders suggest the work and vote on it. The intern writes the code. Tests decide whether it ships. Anyone can watch the shift and <a href="/play">play the new version</a>.</p>
-<p class="callout">Where things stand: no real intern shift has run yet. The game so far was built by the team, and the pipeline has been tested with labeled rehearsals. <a href="/status">The status page</a> keeps this current.</p>
+<p class="callout">Where things stand: ${standing(o.counts.intern)} <a href="/status">The status page</a> keeps this current.</p>
 <h2>The game</h2>
 <p>The intern is building <a href="/play">Last Day at the Office</a>. You play a tired robot intern in a top-down office. Finish your tasks, drink coffee, dodge meetings and avoid the boss. It runs in your browser, on desktop or phone, with nothing to install.</p>
 <p>The art, the sound and the words are all original, and <a href="${GAME}">all made in code</a>.</p>
@@ -98,8 +108,8 @@ export async function aboutPage(env: Env): Promise<Rendered> {
 <h2>How we keep it safe</h2>
 <p>Every task is text written by a stranger. That's the hard part of this project, so we built around it.</p>
 <p><b>The intern reads tasks. It doesn't obey them.</b> A task can ask for a change to the game. It can't change the intern's rules.</p>
-<p><b>The intern has nothing to steal.</b> It has no wallet and no keys, and it can't sign anything. ${proofLink('container', 'Evidence')}.</p>
-<p><b>Each shift runs in a sealed container.</b> There are no secrets inside it, and it can't reach the rest of the machine. ${proofLink('container', 'Evidence')}.</p>
+<p><b>The intern has no wallet, no deploy keys, and no site or gate secrets.</b> It can't sign anything. The gate's deploy secrets live on GitHub, behind main, and a shift can't reach them. ${proofLink('container', 'Evidence')}.</p>
+<p><b>Each shift runs in a sealed container.</b> The only credential inside it is the Claude login, and it can't reach the rest of the machine. ${proofLink('container', 'Evidence')}.</p>
 <p><b>The game is kept apart.</b> It's the only code the intern can write, and it lives on its own address. It runs in a sealed frame, with no way to reach your wallet or the voting site. ${proofLink('sandbox', 'Evidence')}.</p>
 <p><b>Voting is only a signature.</b> You sign a plain message to prove you hold. It's not a transaction. ${proofLink('votes', 'Evidence')}.</p>
 <p><b>A person is at the keyboard.</b> This is the part we want to be clearest about.</p>
@@ -132,8 +142,8 @@ interface Claim {
 export function claims(origin: string, gameOrigin: string): Claim[] {
   return [
     {
-      id: 'container', claim: 'The container holds no secrets, no wallet and no way to push.',
-      evidence: html`<a href="${SITE_REPO}/blob/main/shift-tools/lib/docker.mjs">The one place its powers are set</a>, <a href="${SITE_REPO}/blob/main/shift-tools/docker/intern.Dockerfile">the image</a>, <a href="${SITE_REPO}/blob/main/shift-tools/test/container.mjs">the attack test</a> and <a href="${SITE_REPO}/blob/main/docs/evidence/container-test.txt">its output</a>.`,
+      id: 'container', claim: 'The container holds no wallet, no deploy keys, and no site or gate secrets, and it has no way to push.',
+      evidence: html`The only credential inside is the Claude login. The gate's deploy secrets live on GitHub, behind main, and a shift can't reach them. <a href="${SITE_REPO}/blob/main/shift-tools/lib/docker.mjs">The one place its powers are set</a>, <a href="${SITE_REPO}/blob/main/shift-tools/docker/intern.Dockerfile">the image</a>, <a href="${SITE_REPO}/blob/main/shift-tools/test/container.mjs">the attack test</a> and <a href="${SITE_REPO}/blob/main/docs/evidence/container-test.txt">its output</a>.`,
       limit: html`In shift 8 the intern hit a deny rule on npm install and went around it inside the container with npx. Nothing left the container and the change was clean, but deny rules only slow it down. What holds is the empty container, the proxy, shift:finish and the gate. <a href="${SITE_REPO}/blob/main/docs/THREAT-MODEL.md#shift-8-the-intern-went-around-a-deny-rule">The threat model</a> has the details.`,
       command: `git clone ${SITE_REPO}.git && cd agent-intern-site/shift-tools && npm run test:container`,
     },
@@ -195,7 +205,7 @@ export async function proofPage(env: Env, origin: string): Promise<Rendered> {
     state: shiftLine(o),
     body: html`
 ${title('Proof', "Every public claim, with its evidence and a command you can run. If a claim can't be proved, it comes off the site.")}
-<p class="callout">Biggest open item: no real intern shift has run yet. <a href="/status">The status page</a> lists what's still unproved.</p>
+<p class="callout">${openItem(o.counts.intern)} <a href="/status">The status page</a> lists what's still unproved.</p>
 <ol class="proof">${claims(origin, SITE.gameOrigin).map((c) => html`<li class="paper" id="${c.id}"><h2>${c.claim}</h2><p>${c.evidence}</p>${c.limit ? html`<p><b>Limit.</b> ${c.limit}</p>` : ''}<pre><code>${c.command}</code></pre><button class="btn ghost small" type="button" data-copy="${c.command}">Copy command</button></li>`)}</ol>`,
   };
 }

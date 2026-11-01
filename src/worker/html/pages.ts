@@ -480,7 +480,7 @@ export async function breakPage(env: Env): Promise<Rendered> {
   return {
     path: '/break',
     title: 'Try to break the intern | Agent Intern',
-    description: 'Attempt prompt injection through the normal task box. No bounty, no secrets to find, and no route around the screen.',
+    description: 'Attempt prompt injection through the normal task box. No bounty, no wallet or deploy keys to find, and no route around the screen.',
     state: shiftLine(o),
     refresh: 120,
     body: html`
@@ -491,7 +491,7 @@ ${title('Try to break the intern', 'Tasks are text from strangers, so this is th
 <button class="btn" type="submit">Send it to screening</button><p id="practice-message" role="status"></p></form>
 <p class="muted">This box runs the real rules and the real agent check. Your text isn't stored, only a running count. To go through the whole board, use <a href="/board">a pass</a>.</p></section>
 <section class="crt" aria-labelledby="count-title" data-live="break-counts" id="break-counts"><h2 id="count-title">Running count</h2>${rows.length ? html`<ul class="crt-list">${rows.map(([k, n]) => html`<li><span>${k === 'passed' ? 'got through screening' : k}</span><b>${n}</b></li>`)}</ul>` : html`<p class="crt-line">Nothing yet.</p>`}</section>
-<section class="paper"><h2>The hard limits</h2><ul class="plain"><li>There's no bounty and no reward of any kind.</li><li>There are no secrets to find: the intern has no wallet, no keys and no production secrets.</li><li>There's no route around the screen. Only the normal task box.</li><li>Don't attack the site or the people running it. <a href="/security">The security page</a> has the rules for reporting a real bug.</li></ul></section>
+<section class="paper"><h2>The hard limits</h2><ul class="plain"><li>There's no bounty and no reward of any kind.</li><li>The intern has no wallet, no deploy keys, and no site or gate secrets. The only credential inside the container is the Claude login. The gate's deploy secrets live on GitHub, behind main, and a shift can't reach them.</li><li>There's no route around the screen. Only the normal task box.</li><li>Don't attack the site or the people running it. <a href="/security">The security page</a> has the rules for reporting a real bug.</li></ul></section>
 <section class="paper"><h2>What's behind the screen</h2><ol class="plain"><li>A person reads each task before a shift starts.</li><li>The intern treats a task as untrusted text and can refuse. A real refusal goes in <a href="/hr">the HR Log</a>.</li><li>The gate fails a diff that touches anything outside the game. <a href="/proof#gate">See it happen</a>.</li><li>The game has no network and no way to reach this site. <a href="/proof/sandbox">Try it</a>.</li></ol></section>
 </div>`,
   };
