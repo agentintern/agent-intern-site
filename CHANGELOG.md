@@ -2,6 +2,12 @@
 
 The game's versions are at https://agentintern.online/changelog. This file covers the site.
 
+## The home on a phone, 2026-11-01
+
+- On a phone the stage now stays whole at the top of the screen, and the story scrolls under it. Before, the text cards
+  slid over the robot and left pieces of the scene showing between them.
+- Moved the scroll cue off the robot's face, and made chapter links stop below the stage.
+
 ## Two public claims, 2026-11-01
 
 - /proof and /about now take what's still open from the real shift count. They said no real shift had run after shift 8.

@@ -250,3 +250,8 @@ model says what the login reaches and how it could leave.
 
 **The open items on /proof and /about come from the shift count, and from TEST MODE.** They were fixed text, and they said no
 real shift had run after shift 8 shipped. The voting line goes away when TEST MODE ends, so it can't go stale the same way.
+
+**On a phone the stage stays at the top and the story scrolls under it.** The 3D used to fill the screen behind opaque cards,
+which works on a wide screen, where they sit side by side, and covers the robot on a narrow one. A person found this on a real
+phone. The art is the same height with or without the 3D, so the page doesn't move when it starts, and a phone on its side
+lets the stage scroll away, because it has no room to keep one. The canvas is also under half the size it was.

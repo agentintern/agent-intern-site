@@ -9,6 +9,25 @@ before it is a labeled rehearsal, a team change or a shift nobody worked. See [W
 
 Shift 5's rollback is confirmed: `rolled-back` on the site, its pull request closed, and `main` clean.
 
+## The first real phone, 2026-11-01
+
+A person played the game on a real phone and said it feels good. It's the first time anything here ran on one. The same person
+found the home page was wrong: the text cards slid over the robot.
+
+| Check | Where | Result |
+| --- | --- | --- |
+| The stage stays whole, and the story scrolls under it, at 402 by 749 | Local, Chromium and WebKit | Pass |
+| The same question asked of the old layout | Production, before the fix | Text in front of the robot, so the test can fail |
+| 360 by 640, 844 by 390, 768 by 1024 and 1280 by 800, with chapter links and JS off | Local | Pass, and the desktop didn't change |
+| The browser suite | Local | 367 of 367 |
+| Lighthouse mobile on `/`, `/live` and `/play` | Production | Performance 99, 100 and 99. Accessibility, best practices and SEO 100, no blocking time, CLS 0 on `/` |
+
+**One mistake on the way.** The first version moved the hero's box when the 3D started. Nothing visible moved, but it counts:
+Lighthouse scored 81, with CLS 0.391, and that version was live for about 15 minutes. The check only measured the art's
+height, so it passed. It now measures the sections themselves.
+
+The fix hasn't been seen on a real phone yet, and neither has anything in the isometric game beyond that one play.
+
 ## Two public claims, 2026-11-01
 
 Reviews read two things on the live site that didn't match the facts. `/proof` and `/about` said no real intern shift had
