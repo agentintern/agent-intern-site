@@ -12,7 +12,7 @@ const FOV = 26;
 // The height of the world in the opening frame. It never changes with the screen's width, so the poster and the live
 // canvas line up.
 const FRAME_HEIGHT = 6.1;
-// Below the desktop layout the robot is framed in the top part of the screen, above the text.
+// Below the desktop layout the art is a window at the top of the screen, with the text scrolling under it.
 const PHONE_ZOOM = 1.15;
 const OPEN_TOP = CABINET.h + ROBOT_TOP + 0.4;
 const OPEN_DISTANCE = FRAME_HEIGHT / (Math.tan((FOV * Math.PI) / 360) * 2);
@@ -124,8 +124,8 @@ export async function startOffice(canvas: OffscreenCanvas | HTMLCanvasElement, f
   const resize = (next: Size): void => {
     size = next;
     ({ width, height, wide } = next);
-    // The same sum as --art-h in site.css. The frame is taller than the art on a phone, and starts at the top.
-    frameHeight = wide || options.fixed ? height : Math.max(300, Math.min(0.58 * height, 1.18 * width)) * PHONE_ZOOM;
+    // The frame is a little taller than the art on a phone, and starts at the top, so the poster lines up.
+    frameHeight = wide || options.fixed ? height : height * PHONE_ZOOM;
     renderer.setPixelRatio(Math.min(next.ratio, ratioCap));
     renderer.setSize(width, height, false);
     camera.aspect = width / frameHeight;

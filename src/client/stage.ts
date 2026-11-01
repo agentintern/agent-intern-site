@@ -142,7 +142,7 @@ function measure(host: HTMLElement): { width: number; height: number; ratio: num
 function run(host: HTMLElement): void {
   const canvas = document.createElement('canvas');
   canvas.setAttribute('aria-hidden', 'true');
-  // The art takes the full screen behind the story before it's measured.
+  // The art takes its live layout before it's measured.
   story?.classList.add('live');
   host.append(canvas);
   const worker = new Worker(host.dataset.worker ?? '');
